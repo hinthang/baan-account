@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ธีมแอปธนาคาร: กรมท่าเข้มเป็นแบรนด์ น้ำเงินสดเป็นปุ่มหลัก พื้นเทาฟ้าสะอาด ทองใช้เน้นงวดถัดไป
+     (ชื่อตัวแปรเดิมคงไว้ให้โค้ดส่วนอื่นใช้ต่อได้: --palm = กรมท่า, --leaf = น้ำเงินหลัก) */
+  :root {
+    --palm: #0B2A5B;      /* แบรนด์ / หัวข้อ */
+    --palm-2: #123B7A;
+    --leaf: #1A56DB;      /* ปุ่มหลัก */
+    --paper: #F2F5FA;     /* พื้นหลัง */
+    --card: #FFFFFF;
+    --ink: #0F1B2D;
+    --muted: #5A6678;
+    --line: #E1E7F0;
+    --line-2: #CBD5E3;
+    --plus: #0E8A5F;
+    --minus: #D0342C;
+    --due: #D89B0B;       /* ทอง: งวดถัดไป / โฟกัส */
+    --gold-bg: #FDF3D8;
+    --input: #F8FAFD;
+    --tint: #EAF0FD;      /* พื้นฟ้าอ่อน: hover / แท็บที่เลือก */
+    --shadow: 0 1px 2px rgba(15,35,75,.05), 0 12px 28px -20px rgba(15,35,75,.45);
+    --r-lg: 18px; --r: 12px; --r-sm: 10px;
+    --head: 'Anuphan', 'IBM Plex Sans Thai', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink);
+    font-family: 'IBM Plex Sans Thai', 'Sarabun', 'Noto Sans Thai', sans-serif; font-size: 16px; line-height: 1.6; }
+  .num { font-variant-numeric: tabular-nums; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--due); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  h1, h2, h3 { font-family: var(--head); font-weight: 500; letter-spacing: .1px; }
+
+  /* โหลด */
+  #bar { position: fixed; inset: 0 0 auto 0; height: 3px; background: var(--due); transform-origin: left;
+    transform: scaleX(0); transition: transform .4s ease; z-index: 50; }
+  #bar.on { transform: scaleX(.85); transition-duration: 6s; }
+
+  /* หัว: กรมท่าไล่ไปน้ำเงิน + เส้นโค้งจางๆ แบบลายบนธนบัตร */
+  header {
+    position: sticky; top: 0; z-index: 20; color: #fff;
+    background-color: var(--palm);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='80' viewBox='0 0 240 80'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.06' stroke-width='1'%3E%3Cpath d='M0 60 C60 20 120 100 240 40'/%3E%3Cpath d='M0 70 C60 30 120 110 240 50'/%3E%3Cpath d='M0 50 C60 10 120 90 240 30'/%3E%3C/g%3E%3C/svg%3E"),
+      linear-gradient(120deg, #0A2550 0%, #0F3570 55%, #1A4FB8 120%);
+    box-shadow: 0 8px 22px -14px rgba(10,30,70,.7);
+  }
+  .top { max-width: 1000px; margin: 0 auto; padding: 14px 20px 6px; display: flex; align-items: center; gap: 12px; }
+  .brand { font-family: var(--head); font-weight: 500; font-size: 1.35rem; margin-right: auto; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; line-height: 1.2; }
+  .brand::before { content: '฿'; grid-row: span 2; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, #F4C553, #D89B0B); color: #0B2A5B; font-weight: 700; font-size: 1.25rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+  .brand small { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 400; font-size: .78rem; opacity: .75; margin-top: -2px; }
+  .who { text-align: right; font-size: .82rem; line-height: 1.3; opacity: .9; }
+  .who b { display: block; font-size: .95rem; font-weight: 600; }
+  .ghost { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.28); color: #fff; border-radius: 999px;
+    padding: 6px 14px; cursor: pointer; font-size: .82rem; }
+  .ghost:hover { background: rgba(255,255,255,.18); }
+  /* 👁️ ซ่อนยอดเงิน (ค่าเริ่มต้น: ซ่อน) */
+  .eye { display: inline-flex; align-items: center; gap: 6px; }
+  .eye em { font-style: normal; }
+  .eye[aria-pressed="true"] { background: #F4C553; border-color: #F4C553; color: #0B2A5B; }
+  body.masked input[data-num] { -webkit-text-security: disc; text-security: disc; }
+  .ghost { white-space: nowrap; } .hb2 em { font-style: normal; } .hb2 .ico { display: none; }
+  .brand { white-space: nowrap; }
+  @media (max-width: 600px) { .eye em, .hb2 em { display: none; } .hb2 .ico { display: inline; } .ghost { padding: 6px 10px; } }
+  nav { max-width: 1000px; margin: 0 auto; padding: 8px 16px 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
+  nav button { background: transparent; border: 0; color: rgba(255,255,255,.78); padding: 8px 14px;
+    border-radius: 999px; cursor: pointer; white-space: nowrap; font-weight: 500; font-size: .95rem; }
+  nav button:hover { background: rgba(255,255,255,.1); color: #fff; }
+  nav button[aria-current="page"] { background: #fff; color: var(--palm); font-weight: 600; box-shadow: 0 2px 8px -2px rgba(0,0,0,.35); }
+  nav .ti { margin-right: 6px; }
+  /* มือถือ: แถบเมนูด้านล่างแบบแอปธนาคาร */
+  @media (max-width: 640px) {
+    nav { position: fixed; left: 0; right: 0; bottom: 0; max-width: none; z-index: 30; gap: 2px;
+      background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -10px 24px -18px rgba(15,35,75,.55);
+      padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
+    nav button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 66px; padding: 6px 8px;
+      color: var(--muted); font-size: .7rem; font-weight: 500; border-radius: 12px; }
+    nav button:hover { background: var(--tint); color: var(--leaf); }
+    nav .ti { margin: 0; font-size: 1.25rem; line-height: 1.2; }
+    nav .ti svg { width: 24px; height: 24px; vertical-align: 0; }
+    nav button[aria-current="page"] { background: var(--tint); color: var(--leaf); box-shadow: none; font-weight: 600; }
+    main { padding-bottom: 120px !important; }
+    #toast { bottom: calc(86px + env(safe-area-inset-bottom, 0px)) !important; }
+  }
+  @media (max-width: 640px) {
+    .top { padding: 10px 14px 4px; } .who { display: none; } .brand { font-size: 1.15rem; }
+    .brand::before { width: 32px; height: 32px; }
+    .ghost { padding: 5px 10px; }
+  }
+
+  main { max-width: 1000px; margin: 0 auto; padding: 26px 20px 70px; }
+  h2 { font-size: 1.6rem; margin: 0 0 4px; color: var(--palm); }
+  h3 { font-size: 1.08rem; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: .92rem; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px 22px; margin-bottom: 18px; box-shadow: var(--shadow); }
+  .panel > h3:first-child, .panel h3[style*="margin-top:0"] { padding-left: 12px; border-left: 4px solid var(--leaf); line-height: 1.3; color: var(--palm); }
+  .pcard { border-left: 5px solid var(--leaf); }
+  .pcard h3 { padding-left: 0 !important; border-left: 0 !important; }
+
+  /* ปุ่ม / ฟอร์ม */
+  .btn { background: var(--leaf); color: #fff; border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer; font-weight: 600;
+    box-shadow: 0 8px 18px -10px rgba(26,86,219,.9); transition: background .15s, transform .05s; }
+  .btn:hover { background: var(--palm-2); }
+  .btn:active { transform: translateY(1px); }
+  .btn.line { background: #fff; color: var(--palm); border: 1px solid var(--line-2); box-shadow: none; }
+  .btn.line:hover { background: var(--tint); }
+  .btn.danger { background: #fff; color: var(--minus); border: 1px solid #EBC7C2; box-shadow: none; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  label.f { display: block; font-size: .84rem; color: var(--muted); margin-bottom: 14px; font-weight: 500; }
+  label.f input, label.f select { display: block; width: 100%; margin-top: 5px; padding: 11px 13px; border: 1px solid var(--line-2);
+    border-radius: var(--r-sm); background: var(--input); color: var(--ink); font-size: 1rem; font-weight: 400; transition: border-color .15s, box-shadow .15s; }
+  label.f input:hover, label.f select:hover { border-color: #9FB0C8; }
+  label.f input:focus, label.f select:focus { outline: none; border-color: var(--leaf); box-shadow: 0 0 0 3px rgba(26,86,219,.16); background: #fff; }
+  label.f input[readonly] { background: #F1F4F9; }
+  input[type=checkbox] { accent-color: var(--leaf); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } .panel { padding: 16px; } main { padding: 20px 14px 60px; } }
+
+  /* ล็อกอิน / ตั้งค่าครั้งแรก */
+  #login, #setup { min-height: 100vh; display: grid; place-items: center; padding: 20px;
+    background-color: var(--palm);
+    background-image: radial-gradient(circle at 85% 10%, rgba(244,197,83,.22), transparent 32%),
+      radial-gradient(circle at 10% 90%, rgba(26,86,219,.55), transparent 45%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='80' viewBox='0 0 240 80'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.07' stroke-width='1'%3E%3Cpath d='M0 60 C60 20 120 100 240 40'/%3E%3Cpath d='M0 70 C60 30 120 110 240 50'/%3E%3Cpath d='M0 50 C60 10 120 90 240 30'/%3E%3C/g%3E%3C/svg%3E"),
+      linear-gradient(150deg, #0A2550, #0F3570 60%, #123B7A); }
+  #login .box, #setupForm { width: min(400px, 100%); padding: 30px 28px; border: 0; box-shadow: 0 24px 60px -24px rgba(0,0,0,.6); }
+  #login h1, #setupForm h1 { color: var(--palm); font-size: 2rem; margin: 0 0 2px; }
+  #login h1 { display: flex; align-items: center; gap: 12px; }
+  #login h1::before { content: '฿'; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; flex: none;
+    background: linear-gradient(135deg, #F4C553, #D89B0B); color: #0B2A5B; font-size: 1.5rem; font-weight: 700; }
+  .err { color: var(--minus); font-size: .9rem; min-height: 1.4em; }
+
+  /* ภาพรวม: หัวเดือน */
+  /* ภาพรวม: การ์ดยอดเงินแบบหน้าแรกแอปธนาคาร */
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; align-items: end; margin-bottom: 14px;
+    color: #fff; border-radius: 22px; padding: 24px 26px; position: relative; overflow: hidden;
+    background: radial-gradient(circle at 100% 0%, rgba(244,197,83,.28), transparent 38%),
+      linear-gradient(125deg, #0A2550 0%, #123B7A 55%, #1A56DB 110%);
+    box-shadow: 0 22px 40px -26px rgba(10,37,80,.9); }
+  .hero::after { content: ''; position: absolute; right: -60px; bottom: -90px; width: 260px; height: 260px; border-radius: 50%;
+    border: 36px solid rgba(255,255,255,.06); pointer-events: none; }
+  .hero::before { content: ''; position: absolute; left: 26px; top: 0; width: 46px; height: 4px; border-radius: 0 0 4px 4px; background: #F4C553; }
+  .hero .m { font-family: var(--head); font-size: 1.9rem; font-weight: 600; line-height: 1.15; color: #fff; }
+  .hero .pd { color: rgba(255,255,255,.75); font-size: .9rem; margin-top: 4px; }
+  .hero .left .lbl { color: rgba(255,255,255,.75); }
+  .hero .pos { color: #7EF0BF; } .hero .neg { color: #FFB3AC; }
+  .hero .pd::before { content: '📅 '; }
+  .left { text-align: right; position: relative; z-index: 1; }
+  .left .lbl { color: var(--muted); font-size: .85rem; }
+  .left .v { font-family: var(--head); font-size: 2.7rem; font-weight: 600; line-height: 1.05; letter-spacing: -.5px; }
+  .pos { color: var(--plus); } .neg { color: var(--minus); }
+  .hero { grid-template-columns: 1fr auto 190px; }
+  .hero .hill { position: relative; z-index: 1; align-self: center; }
+  .hero .hill svg, .phero .pill svg { display: block; width: 100%; height: auto; }
+
+  /* หัวหน้าแต่ละหน้า: แถบสีพร้อมภาพประกอบ */
+  .phero { display: grid; grid-template-columns: 1fr 200px; align-items: center; gap: 12px 20px; margin-bottom: 18px;
+    padding: 20px 24px; border-radius: 22px; color: #fff; position: relative; overflow: hidden;
+    background: linear-gradient(125deg, var(--h1), var(--h2)); box-shadow: 0 20px 36px -26px var(--h1); }
+  .phero::after { content: ''; position: absolute; left: -70px; bottom: -120px; width: 260px; height: 260px; border-radius: 50%;
+    border: 34px solid rgba(255,255,255,.07); pointer-events: none; }
+  .phero .pt { position: relative; z-index: 1; min-width: 0; }
+  .phero h2 { color: #fff; font-size: 1.75rem; font-weight: 600; margin: 0 0 4px; }
+  .phero p { color: rgba(255,255,255,.85); margin: 0; font-size: .92rem; max-width: 48ch; }
+  .phero .pill { position: relative; z-index: 1; margin: -6px 0 -10px; }
+  .ver { text-align: center; color: var(--muted); font-size: .72rem; padding: 0 16px 24px; opacity: .8; }
+  @media (max-width: 640px) { .ver { padding-bottom: 100px; } }
+  .ph-income  { --h1: #0B6B55; --h2: #22A374; }
+  .ph-expense { --h1: #9C2F28; --h2: #E8665A; }
+  .ph-plan    { --h1: #0A2550; --h2: #1A56DB; }
+  .ph-ins     { --h1: #3B2475; --h2: #7C5CD6; }
+  .ph-palm    { --h1: #1D5C38; --h2: #3E9E62; }
+  .ph-condo   { --h1: #12306E; --h2: #3B7BE8; }
+  .ph-users   { --h1: #2A3547; --h2: #5B6B85; }
+  nav .ti svg { width: 20px; height: 20px; display: inline-block; vertical-align: -4px; }
+  @media (max-width: 700px) {
+    .hero { grid-template-columns: 1fr 104px; padding: 20px; } .hero .hill { grid-column: 2; grid-row: 1; }
+    .hero .m { font-size: 1.5rem; white-space: nowrap; }
+    .hero .left { grid-column: 1 / -1; }
+    .phero { grid-template-columns: 1fr 112px; padding: 16px 18px; } .phero h2 { font-size: 1.4rem; }
+    .phero p { font-size: .84rem; }
+  }
+
+  /* ริบบอนเดือน: ตัวเด่นของหน้า */
+  .ribbon { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(54px, 1fr); gap: 4px;
+    overflow-x: auto; padding: 10px 8px 8px; margin: 0 0 18px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r-lg); box-shadow: var(--shadow); scrollbar-width: thin; }
+  .rb { background: none; border: 0; cursor: pointer; padding: 6px 2px; border-radius: 12px; display: grid;
+    grid-template-rows: 64px 64px auto; justify-items: center; transition: background .15s; }
+  .rb:hover { background: #EFF4FB; }
+  .rb[aria-pressed="true"] { background: var(--gold-bg); box-shadow: inset 0 0 0 2px var(--due); }
+  .rb .up, .rb .dn { width: 22px; display: flex; }
+  .rb .up { align-items: flex-end; border-bottom: 1px dashed var(--line-2); width: 100%; justify-content: center; }
+  .rb .dn { align-items: flex-start; justify-content: center; width: 100%; }
+  .rb i { display: block; width: 20px; border-radius: 6px; }
+  .rb .up i { background: linear-gradient(#2BB07F, var(--plus)); border-radius: 6px 6px 2px 2px; }
+  .rb .dn i { background: linear-gradient(#C9483C, var(--minus)); border-radius: 2px 2px 6px 6px; }
+  .rb .none { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--line-2); margin-top: -5px; }
+  .rb span { font-size: .76rem; color: var(--muted); margin-top: 4px; }
+  .rb[aria-pressed="true"] span { color: #7A5408; font-weight: 700; }
+
+  /* บัญชีรายรับ/รายจ่าย */
+  .ledger { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  @media (max-width: 700px) { .ledger { grid-template-columns: 1fr; } .hero { grid-template-columns: 1fr; } .left { text-align: left; } }
+  .ledger h3 { font-size: 1.05rem; margin: 0 0 8px; padding: 0 0 8px; border-bottom: 2px solid var(--line); }
+  .ledger > div:first-child h3 { color: var(--plus); }
+  .ledger > div:last-child h3 { color: var(--minus); }
+  .ln { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 7px 0; }
+  .ln .k { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ln { background: linear-gradient(to right, var(--line-2) 40%, transparent 0) bottom / 6px 1px repeat-x; }
+  .ln.sum { background: none; border-top: 2px solid var(--ink); font-weight: 700; margin-top: 6px; padding-top: 10px; }
+  .totals { display: flex; gap: 30px; flex-wrap: wrap; font-size: .88rem; color: var(--muted); }
+  .totals b { display: block; font-family: var(--head); font-weight: 500; font-size: 1.25rem; color: var(--ink); }
+
+  /* แพลน */
+  .prog { height: 14px; background: #E3E9F2; border-radius: 99px; overflow: hidden; margin: 10px 0 4px; }
+  .prog i { display: block; height: 100%; background: linear-gradient(90deg, var(--leaf), var(--plus)); border-radius: 99px; }
+  .pl { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center;
+    padding: 13px 6px; border-bottom: 1px solid var(--line); border-radius: 10px; }
+  .pl:last-child { border-bottom: 0; }
+  .pl .t { font-weight: 600; }
+  .pl .d { color: var(--muted); font-size: .84rem; }
+  .pl details { grid-column: 2 / 4; font-size: .85rem; color: var(--muted); }
+  .pl summary { cursor: pointer; width: fit-content; }
+  .tag { font-size: .74rem; padding: 2px 9px; border-radius: 99px; margin-left: 8px; font-weight: 600; vertical-align: 2px; }
+  .tag.paid { background: #DDEFE3; color: var(--plus); }
+  .tag.due { background: var(--gold-bg); color: #7A5408; }
+  .tag.late { background: #F6DCD8; color: var(--minus); }
+  .chk { width: 24px; height: 24px; accent-color: var(--plus); cursor: pointer; }
+  .pl.done { background: #F5F8FC; }
+  .pl.done .t, .pl.done .amt { text-decoration: line-through; color: var(--muted); }
+  details.panel > summary { list-style: none; display: flex; align-items: center; gap: 8px; font-family: var(--head); font-weight: 500 !important; font-size: 1.05rem; }
+  details.panel > summary::-webkit-details-marker { display: none; }
+  details.panel > summary::after { content: '▾'; margin-left: auto; color: var(--muted); transition: transform .2s; }
+  details.panel[open] > summary::after { transform: rotate(180deg); }
+
+  /* รายการ (ปาล์ม / คอนโด / ผ่อน) */
+  .list .it { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .list .it:last-child { border-bottom: 0; }
+  .list .mh { display: flex; justify-content: space-between; margin-top: 18px; padding: 6px 12px; font-weight: 600; color: var(--palm);
+    background: #EEF3FA; border-radius: 10px; font-family: var(--head); }
+  .list .mh:first-child { margin-top: 0; }
+  @media (max-width: 560px) { .list .it { grid-template-columns: 1fr auto; } .list .it .acts { grid-column: 1 / -1; justify-content: flex-start; } }
+  .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .bdel, .bedit { border-radius: 999px; padding: 6px 13px; cursor: pointer; font-weight: 600; font-size: .84rem; white-space: nowrap; transition: background .15s; }
+  .bdel { background: #fff; color: var(--minus); border: 1px solid #EBC7C2; }
+  .bdel:hover { background: #FCEBE8; }
+  .bedit { background: #fff; color: var(--palm); border: 1px solid var(--line-2); }
+  .bedit:hover { background: var(--tint); }
+  .bdel:disabled, .bedit:disabled { opacity: .5; cursor: default; }
+  .fhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .fhead h3 { margin: 0; }
+  .lrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0 14px; align-items: end; }
+  .lrow .bdel { margin-bottom: 14px; }
+  @media (max-width: 600px) { .lrow { grid-template-columns: 1fr auto; } .lrow > label:nth-child(2) { grid-column: 1 / -1; grid-row: 2; } }
+  .editing { box-shadow: 0 0 0 2px var(--due), var(--shadow) !important; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: .84rem; }
+  tbody tr:hover { background: #F5F8FC; }
+
+  /* สมุดบัญชี: สรุป + กราฟ */
+  .sum3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .sum3 > div { padding: 14px 16px; border-radius: var(--r); border: 1px solid transparent; }
+  .sum3 small { display: block; font-size: .82rem; font-weight: 500; }
+  .sum3 b { font-family: var(--head); font-weight: 500; font-size: 1.55rem; }
+  .s-in { background: #E5F3EA; color: var(--plus); border-color: #CDE7D6 !important; }
+  .s-out { background: #FBE9E6; color: var(--minus); border-color: #F2D1CB !important; }
+  .s-net { background: var(--gold-bg); color: #7A5408; border-color: #F0DFAE !important; }
+  @media (max-width: 560px) { .sum3 { grid-template-columns: 1fr; } }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  @media (max-width: 760px) { .charts { grid-template-columns: 1fr; } }
+  .charts h3 { font-size: 1.02rem; margin: 0 0 12px; }
+  .hb { display: grid; grid-template-columns: 7.5em 1fr auto; gap: 8px 10px; align-items: center; font-size: .9rem; }
+  .hb .track { height: 12px; background: #EEF2F7; border-radius: 99px; overflow: hidden; }
+  .hb .track i { display: block; height: 100%; border-radius: 99px; }
+  .hb .pct { color: var(--muted); font-size: .78rem; }
+  .mb { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(34px, 1fr); gap: 6px; align-items: end;
+    height: 170px; overflow-x: auto; padding-top: 6px; border-bottom: 1px solid var(--line); }
+  .mb .c { display: grid; grid-template-rows: 1fr auto; height: 100%; }
+  .mb .bars { display: flex; gap: 3px; align-items: flex-end; justify-content: center; }
+  .mb .bars i { width: 11px; border-radius: 4px 4px 0 0; min-height: 2px; }
+  .mb .bars i.in { background: var(--leaf); } .mb .bars i.out { background: #D0574B; }
+  .mb span { font-size: .72rem; color: var(--muted); text-align: center; margin-top: 4px; }
+  .legend { display: flex; gap: 14px; font-size: .8rem; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .seg { display: inline-flex; background: #EEF2F7; border-radius: 999px; padding: 4px; margin-bottom: 16px; gap: 4px; }
+  .seg label { padding: 7px 20px; cursor: pointer; border-radius: 999px; font-weight: 500; color: var(--muted); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg input:checked + span { font-weight: 700; }
+  .seg label:has(input[value="income"]:checked) { background: #fff; color: var(--plus); box-shadow: 0 2px 6px -2px rgba(0,0,0,.2); }
+  .seg label:has(input[value="expense"]:checked) { background: #fff; color: var(--minus); box-shadow: 0 2px 6px -2px rgba(0,0,0,.2); }
+  .seg label:has(input:focus-visible) { outline: 3px solid var(--due); outline-offset: 0; }
+  .inv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 14px 0 6px; }
+  .inv > div { background: #F3F4FB; border-radius: var(--r); padding: 12px 14px; }
+  .inv small { display: block; color: var(--muted); font-size: .8rem; font-weight: 500; }
+  .inv b { font-family: var(--head); font-weight: 500; font-size: 1.3rem; }
+  @media (max-width: 700px) { .inv { grid-template-columns: 1fr 1fr; } }
+  .prog.inv-p i { background: linear-gradient(90deg, #5C6BC0, #283593); }
+  /* บัตร */
+  .cchip { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 600; padding: 2px 10px 2px 8px;
+    border-radius: 99px; background: #F1F4F9; color: var(--ink); white-space: nowrap; vertical-align: 2px; }
+  .cchip::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--cc, #9AA4B2); flex: none; }
+  .cchip.none { color: var(--muted); font-weight: 500; }
+  /* ประกัน */
+  .ins-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ins-h h3 { margin: 0 0 4px; font-size: 1.2rem; }
+  .ins-h .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: .82rem; color: var(--muted); }
+  .ins-next { background: var(--gold-bg); border: 1px solid #F0DFAE; border-radius: 12px; padding: 10px 14px; margin: -4px 0 14px; font-size: .9rem; }
+  .yrs { display: grid; gap: 6px; }
+  .yr { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; font-size: .82rem; }
+  .yr .dots { display: flex; flex-wrap: wrap; gap: 4px; }
+  .yr .dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-2); background: #fff; }
+  .yr .dots i.p { background: var(--plus); border-color: var(--plus); }
+  .yr .dots i.n { border-color: var(--due); box-shadow: 0 0 0 2px var(--gold-bg); }
+  .yr b { font-weight: 600; } .yr .c { color: var(--muted); white-space: nowrap; }
+  .tag.ins { background: #EFE8FA; color: #5B3F8C; }
+  @media (max-width: 600px) { .yr { grid-template-columns: 52px 1fr; } .yr .c { grid-column: 2; } .yr .dots i { width: 12px; height: 12px; } }
+  /* ยอดจ่ายบัตรจริง */
+  .payhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .payhead h3 { margin: 0; }
+  .payhead select { width: auto; min-width: 180px; }
+  .ptbl .pr { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .9fr) minmax(120px, 1.1fr) minmax(0, 1fr);
+    gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--line-2); }
+  .ptbl .pr.ph { font-size: .78rem; color: var(--muted); font-weight: 600; padding-top: 0; border-bottom: 2px solid var(--line); }
+  .ptbl .pr.pt { border-bottom: 0; border-top: 2px solid var(--ink); font-weight: 700; }
+  .ptbl .pr > :nth-child(2), .ptbl .pr > :nth-child(4) { text-align: right; }
+  .ptbl input { margin: 0; text-align: right; }
+  .ptbl .bk { font-size: .76rem; color: var(--muted); margin-top: 3px; }
+  .pdiff b { font-weight: 600; } .pdiff .over { color: var(--minus); } .pdiff .under { color: #B26A00; }
+  .phist .pr { grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); cursor: default; }
+  .phist .pr > :not(:first-child) { text-align: right; }
+  .phist button { background: none; border: 0; padding: 0; color: var(--palm); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline dotted; }
+  @media (max-width: 600px) {
+    .ptbl:not(.phist) .pr { grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+    .ptbl:not(.phist) .pr.ph { display: none; }
+    .ptbl:not(.phist) .pr > :first-child { grid-column: 1 / -1; }
+    .ptbl:not(.phist) .pr > :nth-child(2) { text-align: left; }
+    .ptbl:not(.phist) .pr > :nth-child(4) { grid-column: 1 / -1; text-align: right; }
+    .ptbl:not(.phist) .pr > [data-l]::before { content: attr(data-l) ' '; color: var(--muted); font-size: .76rem; font-weight: 400; }
+    .ptbl:not(.phist) .pr.pt > :first-child { display: none; }
+    .phist .pr { font-size: .84rem; gap: 6px; }
+  }
+  /* สกอร์การ์ดบัตร */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin: 4px 0 18px; }
+  .kpi { position: relative; overflow: hidden; border-radius: 16px; padding: 14px 16px 13px; background: #fff;
+    border: 1px solid var(--line); box-shadow: 0 10px 24px -20px rgba(15,35,75,.55); --kc: #5E6878; --kb: #F1F4F9; }
+  .kpi::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--kc); }
+  .kpi::after { content: ''; position: absolute; right: -26px; top: -26px; width: 86px; height: 86px; border-radius: 50%;
+    background: var(--kb); pointer-events: none; }
+  .kpi > * { position: relative; z-index: 1; }
+  .kpi small { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--muted); font-weight: 500; }
+  .kpi small i { font-style: normal; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--kb); font-size: .9rem; flex: none; }
+  .kpi b { display: block; font-family: var(--head); font-weight: 500; font-size: 1.55rem; line-height: 1.2; margin-top: 8px;
+    color: var(--kc); overflow-wrap: anywhere; }
+  .kpi b.txt { font-size: 1.15rem; }
+  .kpi > span { display: block; font-size: .76rem; color: var(--muted); margin-top: 2px; min-height: 1em; }
+  .kpi .kbar { height: 6px; border-radius: 99px; background: #EEF2F7; overflow: hidden; margin-top: 8px; }
+  .kpi .kbar i { display: block; height: 100%; border-radius: 99px; background: var(--kc); }
+  .kpi.k1 { --kc: #9A6A0A; --kb: #FBF1D6; }
+  .kpi.k2 { --kc: var(--minus); --kb: #FBE6E3; }
+  .kpi.k3 { --kc: var(--plus); --kb: #E2F2E8; }
+  .kpi.k4 { --kc: #1A63C9; --kb: #E3EEFC; }
+  .kpi.k5 { --kc: var(--palm); --kb: #E3E9F2; }
+  .kpi b.neg { color: var(--minus); }
+  @media (max-width: 420px) { .kpis { grid-template-columns: 1fr 1fr; gap: 10px; } .kpi { padding: 12px 12px 11px; } .kpi b { font-size: 1.25rem; } }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .ccard { border-radius: 16px; background: #fff; border: 1px solid var(--line); overflow: hidden;
+    box-shadow: 0 12px 26px -20px rgba(15,35,75,.6); display: flex; flex-direction: column; }
+  .ccard .face { position: relative; padding: 14px 16px 16px; color: #fff; min-height: 92px;
+    background: linear-gradient(135deg, var(--cc) 0%, color-mix(in srgb, var(--cc) 55%, #000) 100%); }
+  .ccard .face::after { content: ''; position: absolute; right: -30px; top: -40px; width: 140px; height: 140px; border-radius: 50%;
+    background: rgba(255,255,255,.12); }
+  .ccard .face::before { content: ''; position: absolute; right: 16px; bottom: 14px; width: 30px; height: 22px; border-radius: 5px;
+    background: linear-gradient(135deg, #F6E3A1, #C9A23B); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .ccard .cn { font-family: var(--head); font-weight: 500; font-size: 1.25rem; line-height: 1.2; position: relative; z-index: 1; }
+  .ccard .cb { font-size: .8rem; opacity: .88; position: relative; z-index: 1; }
+  .ccard .own { display: inline-block; margin-top: 8px; font-size: .72rem; background: rgba(255,255,255,.2); border-radius: 99px;
+    padding: 1px 9px; position: relative; z-index: 1; }
+  .ccard .body { padding: 14px 16px 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .ccard .big small { display: block; font-size: .78rem; color: var(--muted); }
+  .ccard .big b { font-family: var(--head); font-weight: 500; font-size: 2rem; line-height: 1.1; color: var(--ink); }
+  .ccard .big b.done { font-size: 1.2rem; color: var(--plus); }
+  .ccard .bar { height: 8px; background: #EEF2F7; border-radius: 99px; overflow: hidden; }
+  .ccard .bar i { display: block; height: 100%; border-radius: 99px; background: var(--cc); }
+  .ccard .barl { display: flex; justify-content: space-between; font-size: .74rem; color: var(--muted); margin-top: 3px; }
+  .ccard .mini { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 12px; }
+  .ccard .mini > div { padding: 7px 8px; text-align: center; }
+  .ccard .mini > div + div { border-left: 1px solid var(--line); }
+  .ccard .mini small { display: block; font-size: .7rem; color: var(--muted); }
+  .ccard .mini b { font-size: .95rem; font-weight: 600; }
+  .ccard .ci { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ccard .ci span { font-size: .74rem; background: #F1F4F9; border-radius: 6px; padding: 1px 7px; color: var(--muted); }
+  .ccard .acts { margin-top: auto; justify-content: flex-start; }
+  .ccard.none .face { background: repeating-linear-gradient(135deg, #DDE4EE 0 10px, #E7ECF3 10px 20px); color: var(--ink); }
+  .ccard.none .face::before, .ccard.none .face::after { display: none; }
+  .ccard.nocard .big b { color: var(--muted); font-size: 1.2rem; }
+  .bycard { display: grid; gap: 4px; margin-top: 6px; }
+  .bycard div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .cat { font-size: .74rem; padding: 2px 9px; border-radius: 99px; background: #EEF2F7; color: var(--muted); margin-left: 8px; font-weight: 500; }
+
+  /* แจ้งเตือน */
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--palm); color: #fff; padding: 11px 20px; border-radius: 999px; transition: .25s; z-index: 60; max-width: 90vw;
+    box-shadow: 0 12px 30px -12px rgba(0,0,0,.5); font-weight: 500; }
+  #toast.on { opacity: 1; transform: translateX(-50%); }
+  #toast.bad { background: var(--minus); }
+  dialog { border: 0; border-radius: var(--r-lg); padding: 26px; width: min(400px, 92vw); box-shadow: 0 24px 60px -24px rgba(0,0,0,.55); }
+  dialog::backdrop { background: rgba(15,35,75,.45); backdrop-filter: blur(2px); }
+  .empty { color: var(--muted); padding: 22px 0; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+
+<!-- ล็อกอิน -->
+<section id="login" hidden>
+  <form novalidate class="box panel" id="loginForm">
+    <h1>บัญชีบ้าน</h1>
+    <p class="sub">รายรับ ค่าผ่อน และค่าใช้จ่ายของบ้านในที่เดียว</p>
+    <label class="f">ชื่อผู้ใช้<input id="lu" autocomplete="username" required></label>
+    <label class="f">รหัสผ่าน<input id="lp" type="password" autocomplete="current-password" required></label>
+    <div class="err" id="lerr"></div>
+    <button class="btn" style="width:100%">เข้าสู่ระบบ</button>
+  </form>
+</section>
+
+<!-- ตั้งค่าครั้งแรก -->
+<section id="setup" hidden style="min-height:100vh;display:grid;place-items:center;padding:20px">
+  <form novalidate class="panel" id="setupForm" style="width:min(400px,100%)">
+    <h1 style="color:var(--palm);font-size:1.6rem;margin:0 0 2px">ตั้งค่าครั้งแรก</h1>
+    <p class="sub">สร้างบัญชีผู้ดูแลระบบ บัญชีนี้ใช้เพิ่มคนอื่นเข้ามาใช้งานทีหลัง</p>
+    <label class="f">ชื่อที่แสดง<input id="sn" maxlength="60" placeholder="เช่น ลุงเบนซ์"></label>
+    <label class="f">ชื่อผู้ใช้ (a-z, 0-9, . _ -)<input id="su" required minlength="3" maxlength="30" autocomplete="username"></label>
+    <label class="f">รหัสผ่าน (อย่างน้อย 8 ตัว)<input id="sp" type="password" required minlength="8" autocomplete="new-password"></label>
+    <div class="err" id="serr"></div>
+    <button class="btn" style="width:100%">สร้างบัญชีและเริ่มใช้งาน</button>
+  </form>
+</section>
+
+<!-- แอป -->
+<div id="app" hidden>
+  <header>
+    <div class="top">
+      <div class="brand">บัญชีบ้าน<small id="roleText"></small></div>
+      <div class="who"><b id="whoName"></b><span id="whoUser"></span></div>
+      <button class="ghost eye" id="eyeBtn" aria-pressed="false" title="แสดง/ซ่อนยอดเงิน"><span aria-hidden="true">🙈</span><em>ซ่อนยอด</em></button>
+      <button class="ghost hb2" id="pwBtn" aria-label="เปลี่ยนรหัสผ่าน"><span class="ico" aria-hidden="true">🔑</span><em>เปลี่ยนรหัส</em></button>
+      <button class="ghost hb2" id="outBtn" aria-label="ออกจากระบบ"><span class="ico" aria-hidden="true">🚪</span><em>ออกจากระบบ</em></button>
+    </div>
+    <nav id="nav"></nav>
+  </header>
+  <main id="view"></main>
+  <footer class="ver">หน้าเว็บเวอร์ชัน 2026-11-02 ภาพประกอบ</footer>
+</div>
+
+<dialog id="pwDlg">
+  <form novalidate id="pwForm">
+    <h2>เปลี่ยนรหัสผ่าน</h2>
+    <label class="f">รหัสผ่านเดิม<input type="password" id="pwOld" autocomplete="current-password" required></label>
+    <label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<input type="password" id="pwNew" autocomplete="new-password" minlength="8" required></label>
+    <div class="err" id="pwErr"></div>
+    <div class="row"><button class="btn">เปลี่ยนรหัสผ่าน</button><button type="button" class="btn line" id="pwCancel">ยกเลิก</button></div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- พื้นฐาน ---------- */
+const $ = s => document.querySelector(s);
+const MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MF = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const DW = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const ROLE_TH = { admin: 'ผู้ดูแลระบบ', editor: 'แก้ไขได้', viewer: 'ดูอย่างเดียว' };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const baht = n => (n === null || n === undefined || n === '') ? '–'
+  : S.hide ? '•••••' : Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+const pd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const monthName = s => { const d = pd(s); return `${MF[d.getMonth()]} ${d.getFullYear()}`; };
+const monthShort = s => { const d = pd(s); return `${MS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`; };
+const dayText = s => { if (!s) return ''; const d = pd(s); return `${DW[d.getDay()]} ${d.getDate()} ${MS[d.getMonth()]} ${d.getFullYear()}`; };
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return store.mem[k] || null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { store.mem[k] = v; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { delete store.mem[k]; } },
+  mem: {},
+};
+
+const S = { token: store.get('bb_token'), user: null, tab: 'overview', dash: null, sel: null, hide: true };
+// 👁️ เปิดเว็บมาทุกครั้งซ่อนยอดเงินไว้ก่อน กดปุ่มลูกตาที่หัวเว็บเพื่อแสดง
+function applyEye() {
+  document.body.classList.toggle('masked', S.hide);
+  const b = document.getElementById('eyeBtn'); if (!b) return;
+  b.setAttribute('aria-pressed', String(!S.hide));
+  b.querySelector('span').textContent = S.hide ? '🙈' : '👁️';
+  b.querySelector('em').textContent = S.hide ? 'ซ่อนยอด' : 'แสดงยอด';
+  b.setAttribute('aria-label', S.hide ? 'ยอดเงินถูกซ่อนอยู่ กดเพื่อแสดง' : 'กำลังแสดงยอดเงิน กดเพื่อซ่อน');
+}
+applyEye();
+document.getElementById('eyeBtn').onclick = () => {
+  S.hide = !S.hide; applyEye();
+  if (S.tab === 'overview' && S.dash) drawOverview(); else go(S.tab);
+};
+const can = r => ({ viewer: 1, editor: 2, admin: 3 })[S.user?.role] >= ({ viewer: 1, editor: 2, admin: 3 })[r];
+
+let busyN = 0;
+function busy(on) { busyN += on ? 1 : -1; $('#bar').classList.toggle('on', busyN > 0); }
+function toast(msg, bad) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'on' + (bad ? ' bad' : '');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.className = '', 3200);
+}
+function run(fn, ...args) {
+  busy(true);
+  return new Promise((res, rej) => google.script.run
+    .withSuccessHandler(v => { busy(false); res(v); })
+    .withFailureHandler(e => { busy(false); rej(e); })[fn](...args));
+}
+async function api(action, data) {
+  try { return await run('api', S.token, action, data || {}); }
+  catch (e) {
+    const m = String(e && e.message || e);
+    if (m.includes('AUTH')) { signedOut(); throw new Error('เซสชันหมดอายุ เข้าสู่ระบบใหม่อีกครั้ง'); }
+    throw new Error(m.replace(/^Error:\s*/, '').replace(/^Exception:\s*/, ''));
+  }
+}
+const fail = e => toast(e.message || String(e), true);
+
+/* ---------- สีประจำบัตร/ธนาคาร (เดาจากชื่อ) ---------- */
+const BANK_COLORS = [
+  ['เฟิร์สช้อยส์', '#1E7BF2'], ['first choice', '#1E7BF2'], ['เซ็นทรัล', '#B3121F'], ['central', '#B3121F'],
+  ['กสิกร', '#138F2D'], ['kbank', '#138F2D'], ['ไทยพาณิชย์', '#4E2A84'], ['scb', '#4E2A84'],
+  ['กรุงศรี', '#D4A900'], ['krungsri', '#D4A900'], ['ktc', '#D7193F'], ['กรุงไทย', '#00A0DF'], ['ktb', '#00A0DF'],
+  ['กรุงเทพ', '#1E4598'], ['bbl', '#1E4598'], ['ทีทีบี', '#1279BE'], ['ttb', '#1279BE'], ['ยูโอบี', '#0B3B8C'], ['uob', '#0B3B8C'],
+  ['ออมสิน', '#E5187D'], ['อิออน', '#A3007A'], ['aeon', '#A3007A'], ['ซีไอเอ็มบี', '#7A0019'], ['cimb', '#7A0019'],
+];
+const BANK_LIST = ['กสิกรไทย', 'ไทยพาณิชย์', 'กรุงเทพ', 'กรุงไทย', 'KTC (กรุงไทยคาร์ด)', 'กรุงศรีอยุธยา', 'กรุงศรี (เฟิร์สช้อยส์)',
+  'เซ็นทรัล (กรุงศรี คอนซูมเมอร์)', 'ทีทีบี', 'ยูโอบี', 'ออมสิน', 'อิออน', 'ซีไอเอ็มบี ไทย'];
+function cardColor(c) {
+  if (!c) return '#9AA59D';
+  const t = `${c.name} ${c.bank}`.toLowerCase();
+  const hit = BANK_COLORS.find(([k]) => t.includes(k));
+  if (hit) return hit[1];
+  let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return `hsl(${h} 45% 42%)`;
+}
+/* ---------- ภาพประกอบ (SVG ในหน้า ไม่ต้องโหลดรูปจากที่อื่น) ---------- */
+const SH = (cx, w) => `<ellipse cx="${cx}" cy="130" rx="${w}" ry="7" fill="#000" opacity=".16"/>`;
+const coins = (x, y, n) => Array.from({ length: n }, (_, i) => {
+  const yy = y - i * 9;
+  return `<ellipse cx="${x}" cy="${yy + 7}" rx="17" ry="5.5" fill="#B8820A"/><rect x="${x - 17}" y="${yy}" width="34" height="7" fill="#D89B0B"/>
+    <ellipse cx="${x}" cy="${yy}" rx="17" ry="5.5" fill="#F4C553"/>`;
+}).join('') + `<text x="${x}" y="${y - (n - 1) * 9 + 3.5}" font-size="9" font-weight="700" fill="#8A5E00" text-anchor="middle">฿</text>`;
+const note = (x, y, rot, c1, c2) => `<g transform="rotate(${rot} ${x + 40} ${y + 21})"><rect x="${x}" y="${y}" width="80" height="42" rx="6" fill="${c1}"/>
+  <rect x="${x + 5}" y="${y + 5}" width="70" height="32" rx="4" fill="none" stroke="${c2}" stroke-width="1.5"/>
+  <circle cx="${x + 40}" cy="${y + 21}" r="9" fill="${c2}"/><text x="${x + 40}" y="${y + 25}" font-size="11" font-weight="700" fill="${c1}" text-anchor="middle">฿</text></g>`;
+const ILL = {
+  overview: `<svg viewBox="0 0 190 140">${SH(95, 76)}
+    <rect x="128" y="40" width="13" height="58" rx="3" fill="#9EC1FF" opacity=".55"/><rect x="146" y="20" width="13" height="78" rx="3" fill="#9EC1FF" opacity=".8"/>
+    <rect x="164" y="52" width="13" height="46" rx="3" fill="#9EC1FF" opacity=".45"/>
+    ${note(30, 30, -12, '#2BB07F', '#7EE0B5')}
+    <rect x="20" y="58" width="112" height="68" rx="14" fill="#2F6BEA"/><rect x="20" y="58" width="112" height="24" rx="12" fill="#5B8DF5"/>
+    <rect x="96" y="84" width="42" height="26" rx="9" fill="#0B2A5B"/><circle cx="110" cy="97" r="5" fill="#F4C553"/>
+    ${coins(160, 118, 3)}</svg>`,
+  income: `<svg viewBox="0 0 190 140">${SH(95, 74)}
+    ${note(18, 48, -8, '#2BB07F', '#7EE0B5')}${note(30, 62, 4, '#21986C', '#6FD6A9')}
+    ${coins(132, 120, 4)}${coins(166, 120, 2)}
+    <circle cx="150" cy="40" r="24" fill="#fff" opacity=".95"/><path d="M150 52V28m0 0l-10 10m10-10l10 10" stroke="#0E8A5F" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+  expense: `<svg viewBox="0 0 190 140">${SH(95, 72)}
+    <path d="M40 14h70v104l-7-5-7 5-7-5-7 5-7-5-7 5-7-5-7 5-7-5-7 5z" fill="#fff"/>
+    <path d="M52 34h46M52 48h46M52 62h30M52 82h46" stroke="#CBD5E3" stroke-width="5" stroke-linecap="round"/>
+    <path d="M52 96h20" stroke="#F06B5F" stroke-width="5" stroke-linecap="round"/>
+    ${coins(140, 120, 2)}<circle cx="150" cy="44" r="24" fill="#fff" opacity=".95"/>
+    <path d="M150 32v24m0 0l-10-10m10 10l10-10" stroke="#D0342C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+  plan: `<svg viewBox="0 0 190 140">${SH(95, 76)}
+    <g transform="rotate(-10 80 60)"><rect x="22" y="30" width="112" height="70" rx="11" fill="#0B2A5B"/><rect x="22" y="46" width="112" height="13" fill="#123B7A"/></g>
+    <rect x="44" y="50" width="116" height="72" rx="12" fill="#5B8DF5"/><rect x="44" y="50" width="116" height="72" rx="12" fill="url(#cg)"/>
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    <rect x="58" y="66" width="22" height="16" rx="3" fill="#F4C553"/><path d="M58 74h22M69 66v16" stroke="#D89B0B" stroke-width="1.2"/>
+    <path d="M58 100h18M82 100h18M106 100h18M130 100h14" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+    <circle cx="138" cy="72" r="8" fill="#F06B5F" opacity=".9"/><circle cx="148" cy="72" r="8" fill="#F4C553" opacity=".9"/>
+    <rect x="140" y="10" width="40" height="38" rx="7" fill="#fff"/><rect x="140" y="10" width="40" height="11" rx="5" fill="#F06B5F"/>
+    <path d="M150 34l5 5 10-10" stroke="#0E8A5F" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  ins: `<svg viewBox="0 0 190 140">${SH(90, 70)}
+    <path d="M86 12l46 18v32c0 30-20 52-46 64-26-12-46-34-46-64V30z" fill="#fff"/>
+    <path d="M86 24l34 13v25c0 23-15 40-34 50-19-10-34-27-34-50V37z" fill="#7C5CD6"/>
+    <path d="M70 66l12 12 22-24" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    ${coins(152, 122, 3)}<path d="M150 28c-5-8-18-4-14 6 2 5 14 12 14 12s12-7 14-12c4-10-9-14-14-6z" fill="#F06B5F"/></svg>`,
+  palm: `<svg viewBox="0 0 190 140">${SH(95, 80)}
+    <circle cx="150" cy="34" r="20" fill="#F4C553"/><text x="150" y="40" font-size="17" font-weight="700" fill="#B8820A" text-anchor="middle">฿</text>
+    <path d="M10 128c30-30 140-30 170 0z" fill="#2E8B57"/>
+    <path d="M86 122c2-30 0-52 6-72" stroke="#8B5A2B" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M92 50c-14-14-36-14-50-4 18-4 34 0 50 4z M92 50c10-18 32-24 48-16-18 0-34 6-48 16z M92 50c-20-2-34 8-40 22 12-12 26-18 40-22z
+      M92 50c18-4 34 4 42 18-12-10-26-14-42-18z M92 50c-2-16 6-30 18-36-8 10-14 22-18 36z" fill="#3FBF7F"/>
+    <circle cx="88" cy="56" r="5" fill="#E07A2E"/><circle cx="96" cy="57" r="5" fill="#E07A2E"/><circle cx="92" cy="62" r="5" fill="#C9631E"/>
+    ${coins(140, 122, 2)}</svg>`,
+  condo: `<svg viewBox="0 0 190 140">${SH(95, 76)}
+    <rect x="40" y="20" width="56" height="106" rx="5" fill="#fff"/><rect x="100" y="46" width="46" height="80" rx="5" fill="#C9DBFF"/>
+    ${[0, 1, 2, 3, 4].map(r => [0, 1, 2].map(c => `<rect x="${48 + c * 15}" y="${30 + r * 17}" width="10" height="10" rx="2" fill="${(r + c) % 3 ? '#9EC1FF' : '#F4C553'}"/>`).join('')).join('')}
+    ${[0, 1, 2].map(r => [0, 1].map(c => `<rect x="${108 + c * 17}" y="${56 + r * 17}" width="11" height="10" rx="2" fill="#5B8DF5"/>`).join('')).join('')}
+    <rect x="60" y="108" width="16" height="18" rx="2" fill="#0B2A5B"/>
+    <circle cx="160" cy="98" r="11" fill="none" stroke="#F4C553" stroke-width="6"/><path d="M160 109v18m0-6h7m-7-6h5" stroke="#F4C553" stroke-width="6" stroke-linecap="round"/></svg>`,
+  users: `<svg viewBox="0 0 190 140">${SH(95, 70)}
+    <circle cx="74" cy="48" r="20" fill="#fff"/><path d="M38 124c0-26 16-42 36-42s36 16 36 42z" fill="#fff"/>
+    <circle cx="122" cy="56" r="15" fill="#C9DBFF"/><path d="M98 124c2-20 12-32 24-32s24 12 26 32z" fill="#C9DBFF"/>
+    <rect x="140" y="20" width="34" height="28" rx="6" fill="#F4C553"/><path d="M146 20v-6a11 11 0 0122 0v6" stroke="#F4C553" stroke-width="5" fill="none"/>
+    <circle cx="157" cy="33" r="4" fill="#8A5E00"/></svg>`,
+};
+const NAV_ICON = (() => {
+  const w = (b) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
+  const f = 'fill="currentColor" fill-opacity=".16"';
+  return {
+    overview: w(`<rect x="3" y="3" width="18" height="18" rx="4" ${f}/><path d="M7.5 16v-3M12 16V8M16.5 16v-5"/>`),
+    income: w(`<rect x="3" y="7" width="18" height="13" rx="3" ${f}/><path d="M12 3v8m0 0l-3-3m3 3l3-3M16 14h2"/>`),
+    expense: w(`<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" ${f}/><path d="M9 8h6M9 12h6M9 16h3"/>`),
+    plan: w(`<rect x="2.5" y="5" width="19" height="14" rx="3" ${f}/><path d="M2.5 9.5h19M6 15h4"/>`),
+    ins: w(`<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" ${f}/><path d="M9 12l2 2 4-4"/>`),
+    palm: w(`<path d="M12 21c0-4 0-7 1-10"/><path d="M13 11c-2-3-6-3.5-9-2 3 .2 6 .8 9 2zM13 11c1.5-3 5.5-4.5 8-3-3 .3-5.5 1.3-8 3zM13 11c-.5-3 1-6 3.5-7-1.5 2-2.8 4.2-3.5 7z" ${f}/><path d="M4 21h16"/>`),
+    condo: w(`<rect x="5" y="3" width="14" height="18" rx="2" ${f}/><path d="M9 7h1.5M13.5 7H15M9 11h1.5M13.5 11H15M11 21v-4h2v4"/>`),
+    users: w(`<circle cx="9" cy="8" r="3.5" ${f}/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15.5 5.2A3 3 0 0117 11M17 14c2.5.3 4 2.4 4 5"/>`),
+  };
+})();
+function pageHero(key, title, sub) {
+  return `<div class="phero ph-${key}"><div class="pt"><h2>${title}</h2><p>${sub}</p></div>
+    <div class="pill" aria-hidden="true">${ILL[key] || ''}</div></div>`;
+}
+
+/** สกอร์การ์ด: [{icon,label,value,sub,tone,id,subId,bar,txt,cls}] tone = gold|red|green|blue|palm */
+const TONE = { gold: 'k1', red: 'k2', green: 'k3', blue: 'k4', palm: 'k5' };
+function kpis(list) {
+  return `<div class="kpis">${list.filter(Boolean).map(t => `<div class="kpi ${TONE[t.tone] || ''}">
+    <small>${t.icon ? `<i aria-hidden="true">${t.icon}</i>` : ''}${esc(t.label)}</small>
+    <b class="${t.txt ? 'txt' : 'num'} ${t.cls || ''}" ${t.id ? `id="${t.id}"` : ''}>${t.value}</b>
+    ${t.bar != null ? `<div class="kbar" role="img" aria-label="${Math.round(t.bar)}%"><i style="width:${Math.max(0, Math.min(100, t.bar))}%"></i></div>` : ''}
+    <span ${t.subId ? `id="${t.subId}"` : ''}>${t.sub || ''}</span></div>`).join('')}</div>`;
+}
+const cardChip = (c, label) => c
+  ? `<span class="cchip" style="--cc:${cardColor(c)}" title="${esc(c.bank)}">${esc(label || c.name)}</span>`
+  : '<span class="cchip none">ยังไม่ระบุบัตร</span>';
+
+/* ---------- มือถือ: แปลงตัวเลข + ตรวจฟอร์มเอง (Safari บนมือถือมักบล็อกฟอร์มเงียบๆ ไม่แจ้งอะไร) ---------- */
+const THAI_DIGITS = '๐๑๒๓๔๕๖๗๘๙';
+function cleanNum(v) {
+  return String(v || '').replace(/[๐-๙]/g, d => THAI_DIGITS.indexOf(d))
+    .replace(/บาท|บ\.?|฿|,|\s/g, '');   // ตัดหน่วย/ลูกน้ำออกตอนบันทึก
+}
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.matches && el.matches('input[data-num]')) {
+    // ระหว่างพิมพ์: แปลงแค่เลขไทยเป็นเลขอารบิก ไม่ลบตัวอักษรที่พิมพ์ (ลบตอนบันทึก)
+    const c = el.value.replace(/[๐-๙]/g, d => THAI_DIGITS.indexOf(d));
+    if (c !== el.value) el.value = c;
+  }
+}, true);
+document.addEventListener('submit', e => {
+  const f = e.target;
+  f.querySelectorAll('input[data-num]').forEach(i => { i.value = cleanNum(i.value); });
+  const label = el => ((el.closest('label') || {}).firstChild || {}).textContent || 'ช่องนี้';
+  for (const el of f.querySelectorAll('input, select')) {
+    if (el.disabled || el.readOnly || el.type === 'radio' || el.type === 'checkbox' || el.offsetParent === null) continue;
+    const v = el.value.trim();
+    let msg = '';
+    if (el.required && !v) msg = `กรอก "${label(el).trim()}" ก่อน`;
+    else if (el.hasAttribute('data-num') && v && !/^\d+(\.\d+)?$/.test(v)) msg = `"${label(el).trim()}" ต้องเป็นตัวเลข`;
+    else if (el.minLength > 0 && v && v.length < el.minLength) msg = `"${label(el).trim()}" สั้นเกินไป (อย่างน้อย ${el.minLength} ตัว)`;
+    if (msg) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      toast(msg, true); el.focus();
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+  }
+}, true);
+
+/* ---------- ล็อกอิน ---------- */
+function signedOut() {
+  store.del('bb_token'); S.token = null; S.user = null;
+  $('#app').hidden = true; $('#setup').hidden = true; $('#login').hidden = false; $('#lu').focus();
+}
+async function boot() {
+  if (S.token) return start();
+  try {
+    const st = await run('setupStatus');
+    if (st.needsSetup) { $('#login').hidden = true; $('#setup').hidden = false; $('#sn').focus(); return; }
+  } catch (e) {}
+  signedOut();
+}
+$('#setupForm').onsubmit = async e => {
+  e.preventDefault(); $('#serr').textContent = '';
+  try {
+    const r = await run('createFirstAdmin', $('#su').value, $('#sp').value, $('#sn').value);
+    S.token = r.token; S.user = r.user; store.set('bb_token', r.token);
+    $('#setup').hidden = true; start();
+  } catch (err) { $('#serr').textContent = String(err.message || err).replace(/^Error:\s*/, ''); }
+};
+$('#loginForm').onsubmit = async e => {
+  e.preventDefault(); $('#lerr').textContent = '';
+  try {
+    const r = await run('login', $('#lu').value, $('#lp').value);
+    S.token = r.token; S.user = r.user; store.set('bb_token', r.token); $('#lp').value = '';
+    start();
+  } catch (err) { $('#lerr').textContent = String(err.message || err).replace(/^Error:\s*/, ''); }
+};
+$('#outBtn').onclick = async () => { try { await run('logout', S.token); } catch (e) {} signedOut(); };
+$('#pwBtn').onclick = () => { $('#pwErr').textContent = ''; $('#pwForm').reset(); $('#pwDlg').showModal(); };
+$('#pwCancel').onclick = () => $('#pwDlg').close();
+$('#pwForm').onsubmit = async e => {
+  e.preventDefault();
+  try { await api('changePassword', { oldPassword: $('#pwOld').value, newPassword: $('#pwNew').value });
+        $('#pwDlg').close(); toast('เปลี่ยนรหัสผ่านแล้ว'); }
+  catch (err) { $('#pwErr').textContent = err.message; }
+};
+
+/* ---------- เมนู ---------- */
+const TABS = [
+  { id: 'overview', i: '📊', t: 'ภาพรวม' },
+  { id: 'income', i: '💰', t: 'รายรับ' },
+  { id: 'expense', i: '🧾', t: 'รายจ่าย' },
+  { id: 'plan', i: '💳', t: 'ผ่อนบัตร' },
+  { id: 'ins', i: '🛡️', t: 'ประกัน' },
+  { id: 'palm', i: '🌴', t: 'สวนปาล์ม' },
+  { id: 'condo', i: '🏙️', t: 'ปล่อยเช่าคอนโด' },
+  { id: 'users', i: '👤', t: 'ผู้ใช้งาน', role: 'admin' },
+];
+function renderNav() {
+  $('#nav').innerHTML = TABS.filter(t => !t.role || can(t.role)).map(t =>
+    `<button data-tab="${t.id}" ${S.tab === t.id ? 'aria-current="page"' : ''}><span class="ti" aria-hidden="true">${NAV_ICON[t.id] || t.i}</span>${t.t}</button>`).join('');
+  $('#nav').querySelectorAll('button').forEach(b => b.onclick = () => go(b.dataset.tab));
+}
+function go(tab) { S.tab = tab; renderNav(); VIEWS[tab]().catch(fail); }
+
+async function start() {
+  try {
+    if (!S.user) S.user = await api('me');
+  } catch (e) { signedOut(); return; }
+  $('#login').hidden = true; $('#setup').hidden = true; $('#app').hidden = false;
+  $('#whoName').textContent = S.user.name; $('#whoUser').textContent = '@' + S.user.username;
+  $('#roleText').textContent = ROLE_TH[S.user.role] || '';
+  go(S.tab);
+}
+
+/* ---------- ภาพรวม ---------- */
+function pickDefaultMonth(rows, today) {
+  const ym = today.slice(0, 7);
+  return (rows.find(r => r.month.slice(0, 7) === ym) || rows[0] || {}).month;
+}
+async function loadDash() { S.dash = await api('dashboard'); if (!S.sel) S.sel = pickDefaultMonth(S.dash.rows, S.dash.today); }
+
+const VIEWS = {};
+VIEWS.overview = async () => {
+  $('#view').innerHTML = '<p class="empty">กำลังโหลด…</p>';
+  await loadDash();
+  drawOverview();
+};
+function drawOverview() {
+  const D = S.dash, rows = D.rows;
+  if (!rows.length) { $('#view').innerHTML = '<p class="empty">ยังไม่มีข้อมูลรายเดือน ให้ผู้ดูแลรันเมนู 💳 แพลนจ่ายบัตร ในชีตก่อน</p>'; return; }
+  const r = rows.find(x => x.month === S.sel) || rows[0];
+  const max = Math.max(1, ...rows.map(x => Math.abs(x.left || 0)));
+  const filled = rows.filter(x => x.left !== null);
+  const sum = k => rows.reduce((s, x) => s + (Number(x[k]) || 0), 0);
+
+  const ribbon = rows.map(x => {
+    const h = x.left === null ? 0 : Math.max(4, Math.round(Math.abs(x.left) / max * 60));
+    const up = x.left !== null && x.left >= 0 ? `<i style="height:${h}px"></i>` : '';
+    const dn = x.left !== null && x.left < 0 ? `<i style="height:${h}px"></i>` : (x.left === null ? '<div class="none"></div>' : '');
+    return `<button class="rb" data-m="${x.month}" aria-pressed="${x.month === r.month}"
+      aria-label="${monthName(x.month)} เหลือ ${x.left === null ? 'ยังไม่กรอก' : baht(x.left)}">
+      <div class="up">${up}</div><div class="dn">${dn}</div><span>${monthShort(x.month)}</span></button>`;
+  }).join('');
+
+  const inc = [
+    [`รายรับ ${D.names[0]}`, r.inc1], [`รายรับ ${D.names[1]}`, r.inc2],
+    ...D.ledgers.map((l, i) => [`${l.icon} ${l.title} (สุทธิ)`, r.ledgers[i]]),
+  ];
+  const exp = [['ค่าผ่อนบัตร', r.plan], [`ค่าบัตรอื่นๆ ${D.names[0]}`, r.oth1], [`ค่าบัตรอื่นๆ ${D.names[1]}`, r.oth2]]
+    .concat(D.fixed.map((f, i) => [`${f.icon} ${f.name}`, r.fixed[i]]));
+  const ln = ([k, v]) => `<div class="ln"><span class="k">${esc(k)}</span><span class="num">${baht(v)}</span></div>`;
+
+  $('#view').innerHTML = `
+    <div class="hero">
+      <div><div class="m">${monthName(r.month)}</div><div class="pd">เงินเดือนเข้า ${dayText(r.payday)}</div></div>
+      <div class="left">
+        <div class="lbl">เหลือหลังจ่ายทุกอย่าง</div>
+        ${r.left === null || r.left === '' || !r.incSum
+          ? `<div class="v" style="font-size:1.3rem;color:rgba(255,255,255,.8)">ยังไม่ได้กรอกรายรับ</div>`
+          : `<div class="v num ${r.left < 0 ? 'neg' : 'pos'}">${baht(r.left)}</div>`}
+      </div>
+      <div class="hill" aria-hidden="true">${ILL.overview}</div>
+    </div>
+    ${kpis([
+      { icon: '💵', label: 'รายรับเดือนนี้', value: baht(r.incSum), tone: 'green',
+        sub: `${esc(D.names[0])} ${baht(r.inc1)} • ${esc(D.names[1])} ${baht(r.inc2)}` },
+      { icon: '🧾', label: 'รายจ่ายเดือนนี้', value: baht(r.exp), tone: 'red',
+        sub: r.incSum ? `${Math.round(r.exp / r.incSum * 100)}% ของรายรับ` : '' },
+      { icon: '💳', label: 'ค่าผ่อนบัตร', value: baht(r.plan), tone: 'gold',
+        sub: r.exp ? `${Math.round(r.plan / r.exp * 100)}% ของรายจ่าย` : '' },
+      { icon: '🐷', label: 'อัตราเงินเหลือ', tone: 'blue',
+        value: r.left === null || !r.incSum ? '–' : `${Math.round(r.left / r.incSum * 100)}%`,
+        cls: r.left !== null && r.left < 0 ? 'neg' : '',
+        bar: r.left === null || !r.incSum ? null : r.left / r.incSum * 100,
+        sub: r.left === null ? 'ยังไม่ได้กรอกรายรับ' : 'ของรายรับเดือนนี้' },
+    ])}
+    <div class="ribbon" role="group" aria-label="เลือกเดือน">${ribbon}</div>
+    <div class="panel ledger">
+      <div><h3>รายรับ</h3>${inc.map(ln).join('')}<div class="ln sum"><span>รวมรายรับ</span><span class="num">${baht(r.incSum)}</span></div></div>
+      <div><h3>รายจ่าย</h3>${exp.map(ln).join('')}<div class="ln sum"><span>รวมรายจ่าย</span><span class="num">${baht(r.exp)}</span></div></div>
+    </div>
+    <h3 style="margin:4px 0 10px">📈 ทั้งช่วง</h3>
+    ${kpis([
+      { icon: '💵', label: 'รายรับทั้งช่วง', value: baht(sum('incSum')), tone: 'green' },
+      { icon: '🧾', label: 'รายจ่ายทั้งช่วง', value: baht(sum('exp')), tone: 'red' },
+      { icon: '💰', label: 'เหลือรวม', value: baht(filled.reduce((s, x) => s + x.left, 0)), tone: 'blue',
+        cls: filled.reduce((s, x) => s + x.left, 0) < 0 ? 'neg' : '',
+        sub: `${filled.length}/${rows.length} เดือนที่กรอกแล้ว`, bar: rows.length ? filled.length / rows.length * 100 : 0 },
+    ])}
+    <div class="row" style="justify-content:flex-end">
+      ${can('editor') ? `<div class="row"><button class="btn line" id="editInc">💰 แก้รายรับเดือนนี้</button><button class="btn line" id="editExp">🧾 แก้รายจ่ายเดือนนี้</button></div>` : ''}
+    </div>`;
+  $('#view').querySelectorAll('.rb').forEach(b => b.onclick = () => { S.sel = b.dataset.m; drawOverview(); });
+  const cur = $('.rb[aria-pressed="true"]');
+  if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest' });
+  const ei = $('#editInc'); if (ei) ei.onclick = () => go('income');
+  const ee = $('#editExp'); if (ee) ee.onclick = () => go('expense');
+}
+
+/* ---------- กรอกรายรับ / รายจ่าย (แยกหน้า) ---------- */
+async function monthPage(title, sub, draw) {
+  if (!S.dash) await loadDash();
+  const opts = S.dash.rows.map(x => `<option value="${x.month}" ${x.month === S.sel ? 'selected' : ''}>${monthName(x.month)}</option>`).join('');
+  $('#view').innerHTML = `
+    ${pageHero(S.tab, title.replace(/^\S+\s/, ''), can('editor') ? sub : 'บัญชีนี้ดูได้อย่างเดียว')}
+    <label class="f" style="max-width:280px">เดือน<select id="em">${opts}</select></label>
+    <div id="eform"><p class="empty">กำลังโหลด…</p></div>`;
+  const load = async () => draw(await api('month', { month: S.sel }));
+  $('#em').onchange = () => { S.sel = $('#em').value; load().catch(fail); };
+  await load();
+}
+const ro_ = () => can('editor') ? '' : 'readonly';
+const numIn = (id, v, label) => `<label class="f">${esc(label)}<input id="${id}" type="text" inputmode="decimal" autocomplete="off" data-num value="${v === '' || v === null ? '' : v}" ${ro_()}></label>`;
+const txtIn = (id, v, label) => `<label class="f">${esc(label)}<input id="${id}" value="${esc(v)}" maxlength="200" ${ro_()}></label>`;
+const dateIn = (id, v, label) => `<label class="f">${esc(label)}<input id="${id}" type="date" value="${esc(v)}" ${ro_()}></label>`;
+const nv = id => { const v = cleanNum($('#' + id).value); return v === '' ? 0 : Number(v) || 0; };
+async function saveAnd(btn, action, data, msg) {
+  if (btn) btn.disabled = true;
+  try { await api(action, data); S.dash = null; await loadDash(); toast(msg); }
+  catch (e) { fail(e); throw e; } finally { if (btn) btn.disabled = false; }
+}
+
+VIEWS.income = () => monthPage('💰 รายรับ', 'กรอกยอดและวันที่ได้เงินของแต่ละคน เว้นว่างได้ถ้ายังไม่ได้รับ', M => {
+  const person = (k, name, amt, date) => `
+    <div class="panel pcard">
+      <div class="fhead" style="margin-bottom:10px"><h3>👤 ${esc(name)}</h3>
+        ${can('editor') && (amt !== '' || date) ? `<button class="bdel" data-clear="i${k},d${k}" data-what="รายรับของ ${esc(name)}">🗑️ ลบ</button>` : ''}</div>
+      <div class="grid2">${numIn('i' + k, amt, 'ยอดที่ได้รับ (บาท)')}${dateIn('d' + k, date, 'วันที่ได้เงิน')}</div>
+    </div>`;
+  $('#eform').innerHTML = `
+    <div class="panel">
+      <div class="fhead"><h3>👥 ชื่อคนที่ 1 / คนที่ 2</h3>
+        ${can('editor') ? '<button class="bedit" id="nmEdit">✏️ แก้ชื่อ</button>' : ''}</div>
+      <p class="sub" id="nmShow" style="margin:6px 0 0">${esc(M.names[0])} • ${esc(M.names[1])}</p>
+      <div id="nmForm" hidden style="margin-top:12px">
+        <div class="grid2">${txtIn('nm1', M.names[0], 'ชื่อคนที่ 1')}${txtIn('nm2', M.names[1], 'ชื่อคนที่ 2')}</div>
+        <div class="row"><button class="btn" id="nmSave">บันทึกชื่อ</button>
+          <button type="button" class="btn line" id="nmCancel">ยกเลิก</button></div>
+      </div>
+    </div>
+    ${kpis([
+      { icon: '👤', label: M.names[0], value: '', id: 'kI1', tone: 'green', subId: 'kD1' },
+      { icon: '👤', label: M.names[1], value: '', id: 'kI2', tone: 'palm', subId: 'kD2' },
+      { icon: '🌴', label: 'สวน / คอนโด (สุทธิ)', value: baht(M.ledgers.reduce((s, l) => s + l.net, 0)), tone: 'blue',
+        cls: M.ledgers.reduce((s, l) => s + l.net, 0) < 0 ? 'neg' : '',
+        sub: M.ledgers.map(l => `${l.icon} ${baht(l.net)}`).join(' • ') },
+      { icon: '💰', label: 'รวมรายรับเดือนนี้', value: '', id: 'kTot', tone: 'gold', sub: `เงินเดือนเข้า ${dayText(M.payday)}` },
+    ])}
+    ${person(1, M.names[0], M.inc1, M.date1)}
+    ${person(2, M.names[1], M.inc2, M.date2)}
+    <div class="panel">${txtIn('inote', M.incNote, 'หมายเหตุ (เช่น โบนัส, OT)')}
+      ${M.ledgers.map(l => `<p class="sub" style="margin:0 0 4px">${l.icon} ${esc(l.title)} เดือนนี้ (สุทธิ) <b class="num ${l.net < 0 ? 'neg' : ''}">${baht(l.net)}</b> บาท (จดที่หน้า "${esc(l.title)}")</p>`).join('')}
+    </div>
+    <div class="panel row" style="justify-content:space-between">
+      <div>รวมรายรับเดือนนี้ <b class="num pos" id="preview" style="font-size:1.4rem"></b></div>
+      ${can('editor') ? '<button class="btn" id="saveI">บันทึกรายรับ</button>' : ''}
+    </div>`;
+  const led = M.ledgers.reduce((s, l) => s + l.net, 0);
+  const prev = () => {
+    const t = baht(nv('i1') + nv('i2') + led);
+    $('#preview').textContent = t; $('#kTot').textContent = t;
+    [1, 2].forEach(k => {
+      $('#kI' + k).textContent = $('#i' + k).value ? baht(nv('i' + k)) : '–';
+      $('#kD' + k).textContent = $('#d' + k).value ? 'ได้เงิน ' + dayText($('#d' + k).value) : 'ยังไม่ได้รับ';
+    });
+  };
+  [1, 2].forEach(k => {
+    // ใส่ยอดแล้วยังไม่มีวันที่ → เติมวันเงินเดือนเข้าให้ (แก้ได้)
+    $('#i' + k).oninput = () => { if ($('#i' + k).value && !$('#d' + k).value) $('#d' + k).value = M.payday; prev(); };
+    $('#d' + k).oninput = prev;
+  });
+  prev();
+  const b = $('#saveI');
+  const save = msg => saveAnd(b, 'saveIncome', {
+    month: S.sel, inc1: $('#i1').value, date1: $('#d1').value, inc2: $('#i2').value, date2: $('#d2').value,
+    incNote: $('#inote').value,
+  }, msg).then(() => VIEWS.income());
+  if (b) b.onclick = () => save('บันทึกรายรับ ' + monthName(S.sel) + ' แล้ว');
+  bindClear(save);
+  // แก้ชื่อ 2 คน
+  const ne = $('#nmEdit');
+  if (ne) {
+    ne.onclick = () => { $('#nmForm').hidden = false; ne.hidden = true; $('#nm1').focus(); };
+    $('#nmCancel').onclick = () => { $('#nmForm').hidden = true; ne.hidden = false; };
+    $('#nmSave').onclick = async () => {
+      const btn = $('#nmSave'); btn.disabled = true;
+      try {
+        await api('saveNames', { name1: $('#nm1').value, name2: $('#nm2').value });
+        S.dash = null; toast('บันทึกชื่อแล้ว'); VIEWS.income();
+      } catch (e) { fail(e); btn.disabled = false; }
+    };
+  }
+});
+
+/** ปุ่ม 🗑️ ลบ ในหน้ารายรับ/รายจ่าย: ล้างช่องที่ระบุแล้วบันทึกทันที */
+function bindClear(save) {
+  $('#eform').querySelectorAll('[data-clear]').forEach(btn => btn.onclick = () => {
+    if (!confirm(`ลบ${btn.dataset.what}ของเดือน ${monthName(S.sel)}?`)) return;
+    btn.dataset.clear.split(',').forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+    save(`ลบ${btn.dataset.what}แล้ว`);
+  });
+}
+
+VIEWS.expense = () => monthPage('🧾 รายจ่าย', 'กรอกค่าบัตรอื่นๆ และค่าใช้จ่ายประจำของเดือนนี้ เว้นว่างได้ถ้ายังไม่รู้ยอด', M => {
+  $('#eform').innerHTML = `
+    ${kpis([
+      { icon: '💳', label: 'ค่าผ่อนบัตร', value: baht(M.plan), tone: 'gold', sub: 'คำนวณจากแพลน' },
+      { icon: '🧾', label: 'ค่าบัตรอื่นๆ', value: '', id: 'kO', tone: 'red', subId: 'kOs' },
+      { icon: '🏠', label: 'ค่าใช้จ่ายประจำ', value: '', id: 'kF', tone: 'palm', sub: M.fixed.map(f => f.icon).join(' ') },
+      { icon: '💸', label: 'รวมรายจ่ายเดือนนี้', value: '', id: 'kE', tone: 'blue', subId: 'kL' },
+    ])}
+    <div class="panel">
+      <h3 style="margin-top:0">🧾 ค่าบัตรอื่นๆ (นอกจากค่าผ่อน)</h3>
+      <div class="grid2">
+        <div class="lrow" style="grid-template-columns:1fr auto">${numIn('o1', M.oth1, M.names[0])}${delBtn('o1', M.oth1, 'ค่าบัตรอื่นๆ ของ ' + M.names[0])}</div>
+        <div class="lrow" style="grid-template-columns:1fr auto">${numIn('o2', M.oth2, M.names[1])}${delBtn('o2', M.oth2, 'ค่าบัตรอื่นๆ ของ ' + M.names[1])}</div>
+      </div>
+      ${txtIn('on', M.othNote, 'หมายเหตุ')}
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">🏠 ค่าใช้จ่ายประจำ</h3>
+      ${M.fixed.map((f, i) => `<div class="lrow">${numIn('f' + i, f.amount, f.icon + ' ' + f.name)}${txtIn('fn' + i, f.note, 'หมายเหตุ')}${delBtn('f' + i + ',fn' + i, f.amount, f.name)}</div>`).join('')}
+      <p class="sub" style="margin:0">💳 ค่าผ่อนบัตรเดือนนี้ <b class="num">${baht(M.plan)}</b> บาท (คำนวณจากแพลนอัตโนมัติ)</p>
+    </div>
+    <div class="panel row" style="justify-content:space-between">
+      <div>รวมรายจ่ายเดือนนี้ <b class="num neg" id="pexp" style="font-size:1.4rem"></b><br>
+        <span class="sub">เหลือหลังจ่ายทุกอย่าง <b class="num" id="preview"></b></span></div>
+      ${can('editor') ? '<button class="btn" id="saveE">บันทึกรายจ่าย</button>' : ''}
+    </div>`;
+  const inc = (Number(M.inc1) || 0) + (Number(M.inc2) || 0) + M.ledgers.reduce((s, l) => s + l.net, 0);
+  const noInc = M.inc1 === '' && M.inc2 === '' && !M.ledgers.some(l => l.net);
+  const prev = () => {
+    const oth = nv('o1') + nv('o2'), fix = M.fixed.reduce((s, _, i) => s + nv('f' + i), 0);
+    const exp = M.plan + oth + fix;
+    $('#pexp').textContent = baht(exp);
+    $('#kO').textContent = baht(oth); $('#kF').textContent = baht(fix); $('#kE').textContent = baht(exp);
+    $('#kOs').textContent = `${M.names[0]} ${baht(nv('o1'))} • ${M.names[1]} ${baht(nv('o2'))}`;
+    $('#kL').textContent = noInc ? 'ยังไม่ได้กรอกรายรับ' : 'เหลือ ' + baht(inc - exp);
+    const el = $('#preview');
+    el.textContent = noInc ? 'ยังไม่ได้กรอกรายรับ' : baht(inc - exp);
+    el.className = 'num ' + (noInc ? '' : inc - exp < 0 ? 'neg' : 'pos');
+  };
+  $('#eform').querySelectorAll('input').forEach(i => i.oninput = prev); prev();
+  const b = $('#saveE');
+  const save = msg => saveAnd(b, 'saveExpense', {
+    month: S.sel, oth1: $('#o1').value, oth2: $('#o2').value, othNote: $('#on').value,
+    fixed: M.fixed.map((_, i) => ({ amount: $('#f' + i).value, note: $('#fn' + i).value })),
+  }, msg).then(() => VIEWS.expense());
+  if (b) b.onclick = () => save('บันทึกรายจ่าย ' + monthName(S.sel) + ' แล้ว');
+  bindClear(save);
+});
+function delBtn(ids, val, what) {
+  return can('editor') && val !== '' && val !== null && val !== undefined
+    ? `<button class="bdel" data-clear="${ids}" data-what="${esc(what)}" aria-label="ลบ${esc(what)}">🗑️ ลบ</button>` : '<span></span>';
+}
+
+/* ---------- ผ่อนบัตร ---------- */
+VIEWS.plan = async () => {
+  $('#view').innerHTML = '<p class="empty">กำลังโหลด…</p>';
+  drawPlan(await api('plan'));
+};
+function drawPlan(P) {
+  const RAW = P.rows;    // ทุกเดือนในแพลน (ใช้กับยอดจ่ายบัตรจริง)
+  P = Object.assign({}, P, { rows: P.rows.filter(r => r.total > 0 || r.paid) }); // แสดงเฉพาะเดือนที่มีงวดผ่อน
+  const total = P.rows.reduce((s, r) => s + r.total, 0);
+  const paid = P.rows.filter(r => r.paid).reduce((s, r) => s + r.total, 0);
+  const nextIdx = P.rows.findIndex(r => !r.paid);
+  const cards = P.cards || [];
+  const cardBy = {}; cards.forEach(c => { cardBy[c.name] = c; });
+  const infoBy = {}; P.info.forEach(i => { infoBy[i.name] = i; });
+  const itemCardName = it => (infoBy[it] && cardBy[infoBy[it].card]) ? infoBy[it].card : '';
+  // ตัวเลขของแต่ละบัตร (สกอร์การ์ด)
+  const cardStat = cn => {
+    const ks = P.items.map((it, k) => itemCardName(it) === cn ? k : -1).filter(k => k >= 0);
+    const sumRow = r => ks.reduce((a, k) => a + (r.amounts[k] || 0), 0);
+    const live = P.rows.filter(r => sumRow(r) > 0);
+    const total = live.reduce((a, r) => a + sumRow(r), 0);
+    const paid = live.filter(r => r.paid).reduce((a, r) => a + sumRow(r), 0);
+    const unpaid = live.filter(r => !r.paid);
+    const nextRow = unpaid[0];
+    return {
+      items: P.items.filter((it, k) => ks.includes(k) && P.rows.some(r => r.amounts[k])),
+      total, paid, left: total - paid, pct: total ? paid / total * 100 : 0,
+      next: nextRow ? sumRow(nextRow) : 0, nextMonth: nextRow ? nextRow.month : '',
+      monthsLeft: unpaid.length, lastMonth: live.length ? live[live.length - 1].month : '',
+    };
+  };
+  const cardTile = (c, isNone) => {
+    const st = cardStat(isNone ? '' : c.name);
+    if (isNone && !st.items.length) return '';
+    const done = st.total > 0 && st.left === 0;
+    return `<div class="ccard ${isNone ? 'none' : ''} ${st.total ? '' : 'nocard'}" style="--cc:${isNone ? '#9AA59D' : cardColor(c)}">
+      <div class="face">
+        <div class="cn">${isNone ? 'ยังไม่ระบุบัตร' : esc(c.name)}</div>
+        <div class="cb">${isNone ? 'กด ✏️ แก้ไข ที่รายการผ่อนเพื่อเลือกบัตร' : esc(c.bank || 'ยังไม่ระบุธนาคาร')}</div>
+        ${!isNone && c.owner ? `<span class="own">👤 ${esc(c.owner)}</span>` : ''}
+      </div>
+      <div class="body">
+        <div class="big"><small>งวดถัดไป${st.nextMonth ? ' • ' + monthName(st.nextMonth) : ''}</small>
+          ${!st.total ? '<b>ไม่มียอดผ่อน</b>' : done ? '<b class="done">ผ่อนครบแล้ว 🎉</b>' : `<b class="num">${baht(st.next)}</b>`}</div>
+        ${st.total ? `<div><div class="bar" role="img" aria-label="จ่ายแล้ว ${st.pct.toFixed(0)}%"><i style="width:${st.pct}%"></i></div>
+          <div class="barl"><span>จ่ายแล้ว ${baht(st.paid)}</span><span>${st.pct.toFixed(0)}%</span></div></div>
+        <div class="mini">
+          <div><small>คงเหลือ</small><b class="num neg">${baht(st.left)}</b></div>
+          <div><small>อีก</small><b>${st.monthsLeft} งวด</b></div>
+          <div><small>ผ่อนหมด</small><b>${st.lastMonth ? monthShort(st.lastMonth) : '-'}</b></div>
+        </div>` : ''}
+        <div class="ci">${st.items.length ? st.items.map(x => `<span>${esc(x)}</span>`).join('') : '<span>ยังไม่มีรายการผ่อนในบัตรนี้</span>'}</div>
+        ${!isNone && can('editor') ? `<div class="acts">
+          <button class="bedit" data-cedit="${c.row}">✏️ แก้ไข</button>
+          <button class="bdel" data-cdel="${c.row}">🗑️ ลบ</button></div>` : ''}
+      </div>
+    </div>`;
+  };
+  // สกอร์การ์ดรวมทุกบัตร
+  const allStat = (() => {
+    const unpaid = P.rows.filter(r => !r.paid && r.total > 0);
+    const live = P.rows.filter(r => r.total > 0);
+    const t = live.reduce((a, r) => a + r.total, 0), pd0 = live.filter(r => r.paid).reduce((a, r) => a + r.total, 0);
+    return { next: unpaid.length ? unpaid[0].total : 0, nextMonth: unpaid.length ? unpaid[0].month : '',
+             left: t - pd0, pct: t ? pd0 / t * 100 : 0,
+             last: live.length ? live[live.length - 1].month : '',
+             active: cards.filter(c => cardStat(c.name).left > 0).length };
+  })();
+  // ---------- ยอดจ่ายบัตรจริงต่อเดือน: เทียบกับยอดผ่อนของแต่ละบัตร ----------
+  const pays = P.pays || [];
+  const payOf = (m, cn) => pays.find(x => x.month === m && x.card === cn);
+  const instOf = (m, cn) => {
+    const r = RAW.find(x => x.month === m); if (!r) return 0;
+    return P.items.reduce((a, it, k) => a + (itemCardName(it) === cn ? (r.amounts[k] || 0) : 0), 0);
+  };
+  const curM = (P.today || '').slice(0, 8) + '01';
+  const payMonths = [...new Set(RAW.map(r => r.month).concat(pays.map(x => x.month)))].sort();
+  if (!payMonths.includes(S.payMonth)) S.payMonth = payMonths.includes(curM) ? curM : (payMonths[0] || curM);
+  const payAll = pays.reduce((a, x) => a + x.amount, 0);
+  const diffHtml = (paid, inst) => {
+    if (paid === null) return '<span class="sub" style="margin:0">ยังไม่กรอก</span>';
+    const d = Math.round((paid - inst) * 100) / 100;
+    return d > 0 ? `<b class="over">เกิน ${baht(d)}</b>` : d < 0 ? `<b class="under">ขาด ${baht(-d)}</b>` : '<b class="pos">✓ พอดียอดผ่อน</b>';
+  };
+  // ประวัติ: เดือนที่กรอกแล้ว (เทียบเฉพาะบัตรที่กรอก)
+  const histMonths = [...new Set(pays.map(x => x.month))].sort().reverse();
+  const hist = histMonths.map(m => {
+    const ps = pays.filter(x => x.month === m && cardBy[x.card]);
+    const inst = ps.reduce((a, x) => a + instOf(m, x.card), 0), paid = ps.reduce((a, x) => a + x.amount, 0);
+    return { m, inst, paid, over: paid - inst, n: ps.length };
+  });
+  const histHtml = hist.length ? `<details style="margin-top:16px">
+      <summary style="cursor:pointer;font-weight:600;color:var(--palm)">📜 ประวัติจ่ายบัตรแต่ละเดือน (${hist.length})</summary>
+      <div class="ptbl phist" style="margin-top:8px">
+        <div class="pr ph"><span>เดือน</span><span>ยอดผ่อน</span><span>จ่ายจริง</span><span>เกิน / ขาด</span></div>
+        ${hist.map(h => `<div class="pr"><span><button type="button" data-pm="${h.m}">${monthShort(h.m)}</button>
+            <span class="bk" style="display:block">${h.n} บัตร</span></span>
+          <span class="num">${baht(h.inst)}</span><span class="num">${baht(h.paid)}</span>
+          <span class="pdiff">${diffHtml(h.paid, h.inst)}</span></div>`).join('')}
+        <div class="pr pt"><span>รวม</span><span class="num">${baht(hist.reduce((a, h) => a + h.inst, 0))}</span>
+          <span class="num">${baht(payAll)}</span><span class="pdiff">${diffHtml(hist.reduce((a, h) => a + h.paid, 0), hist.reduce((a, h) => a + h.inst, 0))}</span></div>
+      </div></details>` : '';
+  const payBody = m => `
+    <div id="payK"></div>
+    ${cards.length ? `<div class="ptbl">
+      <div class="pr ph"><span>บัตร</span><span>ยอดผ่อนเดือนนี้</span><span>จ่ายจริง (บาท)</span><span>เกิน / ขาด</span></div>
+      ${cards.map((c, i) => {
+        const p = payOf(m, c.name);
+        return `<div class="pr">
+          <div>${cardChip(c)}<div class="bk">${esc(c.bank || '')}${c.owner ? ' • ' + esc(c.owner) : ''}</div></div>
+          <div class="num" data-l="ยอดผ่อน">${baht(instOf(m, c.name))}</div>
+          <label><span class="sr-only" style="position:absolute;left:-9999px">จ่ายจริง ${esc(c.name)}</span>
+            <input type="text" inputmode="decimal" autocomplete="off" data-num data-pc="${i}" placeholder="0" value="${p ? p.amount : ''}" ${ro_()}></label>
+          <div class="pdiff" id="pdf${i}"></div>
+        </div>`;
+      }).join('')}
+      <div class="pr pt"><span>รวมทุกบัตร</span><span class="num" data-l="ยอดผ่อน">${baht(cards.reduce((a, c) => a + instOf(m, c.name), 0))}</span>
+        <span class="num" id="pTot" style="text-align:right" data-l="จ่ายจริง"></span><span class="pdiff" id="pTotD"></span></div>
+    </div>` : '<p class="empty">ยังไม่มีบัตร เพิ่มบัตรที่กล่อง 💳 บัตรและธนาคาร ด้านล่างก่อน</p>'}
+    ${can('editor') && cards.length ? `<div class="row" style="justify-content:space-between;margin-top:12px">
+      <span class="sub" style="margin:0">เว้นว่าง = ยังไม่ได้จ่าย / ยังไม่กรอก</span>
+      <button class="btn" id="paySave">บันทึกยอดจ่าย ${monthShort(m)}</button></div>` : ''}
+    ${histHtml}`;
+  const payHtml = `<div class="panel" id="payBox">
+    <div class="payhead"><h3>💸 จ่ายบัตรจริงต่อเดือน</h3>
+      <label class="f" style="margin:0"><span class="sr-only" style="position:absolute;left:-9999px">เลือกเดือน</span>
+        <select id="pm">${payMonths.map(m => `<option value="${m}" ${m === S.payMonth ? 'selected' : ''}>${monthName(m)}</option>`).join('')}</select></label></div>
+    <p class="sub" style="margin:-4px 0 12px">กรอกว่าเดือนนี้จ่ายบัตรแต่ละใบไปเท่าไร ระบบจะเทียบกับยอดผ่อนของบัตรนั้นว่าจ่ายเกินหรือขาดเท่าไร</p>
+    <div id="payBody">${payBody(S.payMonth)}</div>
+  </div>`;
+  let payDirty = false;
+  const bindPay = () => {
+    const m = S.payMonth;
+    const ins = [...document.querySelectorAll('#payBody input[data-pc]')];
+    const val = el => { const v = cleanNum(el.value); return v === '' ? null : (Number(v) || 0); };
+    const savedThis = pays.filter(x => x.month === m).reduce((a, x) => a + x.amount, 0);
+    const upd = () => {
+      let paid = 0, instIn = 0, n = 0;
+      ins.forEach(el => {
+        const i = Number(el.dataset.pc), c = cards[i], inst = instOf(m, c.name), v = val(el);
+        $('#pdf' + i).innerHTML = diffHtml(v, inst);
+        if (v !== null) { paid += v; instIn += inst; n++; }
+      });
+      const instAll = cards.reduce((a, c) => a + instOf(m, c.name), 0), over = paid - instIn;
+      if ($('#pTot')) { $('#pTot').textContent = n ? baht(paid) : '–'; $('#pTotD').innerHTML = n ? diffHtml(paid, instIn) : ''; }
+      $('#payK').innerHTML = kpis([
+        { icon: '💳', label: 'ยอดผ่อนเดือนนี้', value: baht(instAll), tone: 'gold', sub: monthName(m) },
+        { icon: '💸', label: 'จ่ายบัตรจริงรวม', value: baht(paid), tone: 'blue', sub: `กรอกแล้ว ${n}/${cards.length} บัตร`,
+          bar: cards.length ? n / cards.length * 100 : 0 },
+        { icon: over > 0 ? '➕' : over < 0 ? '⚠️' : '✅', label: over < 0 ? 'จ่ายน้อยกว่ายอดผ่อน' : 'จ่ายเกินยอดผ่อน',
+          value: baht(Math.abs(over)), tone: over < 0 ? 'gold' : 'red',
+          sub: n ? (over > 0 ? 'ส่วนที่ใช้จ่ายบัตรเพิ่มนอกจากค่าผ่อน' : over < 0 ? 'เทียบเฉพาะบัตรที่กรอกแล้ว' : 'พอดียอดผ่อน') : 'ยังไม่ได้กรอก' },
+        { icon: '🧮', label: 'จ่ายบัตรทั้งหมด (สะสม)', value: baht(payAll - savedThis + paid), tone: 'palm',
+          sub: `ทุกเดือนที่กรอก (${new Set(pays.map(x => x.month).concat(n ? [m] : [])).size} เดือน)` },
+      ]);
+    };
+    ins.forEach(el => el.addEventListener('input', () => { payDirty = true; upd(); }));
+    upd();
+    const sb = $('#paySave');
+    if (sb) sb.onclick = async () => {
+      sb.disabled = true; sb.textContent = 'กำลังบันทึก…';
+      try {
+        drawPlan(await api('saveCardPays', { month: m, pays: ins.map(el => ({ card: cards[Number(el.dataset.pc)].name, amount: el.value })) }));
+        toast('บันทึกยอดจ่ายบัตร ' + monthName(m) + ' แล้ว');
+      } catch (err) { fail(err); sb.disabled = false; sb.textContent = 'บันทึกยอดจ่าย ' + monthShort(m); }
+    };
+    document.querySelectorAll('#payBody [data-pm]').forEach(b => b.onclick = () => showPay(b.dataset.pm));
+  };
+  const showPay = m => {
+    if (payDirty && !confirm('ยอดที่กรอกไว้ยังไม่ได้บันทึก เปลี่ยนเดือนเลยไหม?')) { $('#pm').value = S.payMonth; return; }
+    payDirty = false; S.payMonth = m; $('#pm').value = m;
+    $('#payBody').innerHTML = payBody(m); bindPay();
+    $('#payBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const rowHtml = (r, i) => {
+    const late = !r.paid && r.payday < P.today;
+    const tag = r.paid ? '<span class="tag paid">จ่ายแล้ว</span>'
+      : late ? '<span class="tag late">เลยวันจ่าย</span>'
+      : i === nextIdx ? '<span class="tag due">งวดถัดไป</span>' : '';
+    const groups = {};
+    P.items.forEach((it, k) => {
+      if (!r.amounts[k]) return;
+      const cn = itemCardName(it);
+      (groups[cn] = groups[cn] || []).push([it, r.amounts[k]]);
+    });
+    const parts = Object.keys(groups).map(cn => {
+      const g = groups[cn], sum = g.reduce((a, x) => a + x[1], 0);
+      return `<div>${cardChip(cardBy[cn])} <b class="num">${baht(sum)}</b>
+        <span>${g.map(x => `${esc(x[0])} ${baht(x[1])}`).join(' • ')}</span></div>`;
+    }).join('');
+    return `<div class="pl ${r.paid ? 'done' : ''}">
+      <input type="checkbox" class="chk" data-m="${r.month}" ${r.paid ? 'checked' : ''} ${can('editor') ? '' : 'disabled'}
+        aria-label="จ่ายแล้ว ${monthName(r.month)}">
+      <div><div class="t">${monthName(r.month)}${tag}</div><div class="d">${dayText(r.payday)}</div></div>
+      <div class="amt num" style="font-weight:700">${baht(r.total)}</div>
+      <details><summary>แยกตามบัตร</summary><div class="bycard">${parts || '-'}</div></details>
+    </div>`;
+  };
+  $('#view').innerHTML = `
+    ${pageHero('plan', 'ผ่อนบัตร', can('editor') ? 'ติ๊กช่องเมื่อจ่ายงวดนั้นแล้ว ยอดคงเหลือจะอัปเดตทันที' : 'ดูสถานะการจ่ายแต่ละงวด')}
+    ${kpis([
+      { icon: '💵', label: 'งวดถัดไป', value: baht(allStat.next), tone: 'gold',
+        sub: nextIdx >= 0 ? `${monthName(P.rows[nextIdx].month)} • ${dayText(P.rows[nextIdx].payday)}` : 'ครบแล้ว 🎉' },
+      { icon: '✅', label: 'จ่ายแล้ว', value: baht(paid), tone: 'green', bar: total ? paid / total * 100 : 0,
+        sub: `${total ? Math.round(paid / total * 100) : 0}% จาก ${baht(total)}` },
+      { icon: '🧾', label: 'คงเหลือ', value: baht(total - paid), tone: 'red',
+        sub: `อีก ${P.rows.filter(r => !r.paid && r.total > 0).length} งวด` },
+      { icon: '🏁', label: 'ผ่อนหมดทุกรายการ', value: allStat.last ? monthName(allStat.last) : '-', txt: true, tone: 'blue',
+        sub: `บัตรที่ยังผ่อนอยู่ ${allStat.active}/${cards.length} ใบ` },
+    ])}
+    ${payHtml}
+    ${can('editor') ? `<details class="panel" id="addBox">
+      <summary style="cursor:pointer;font-weight:600;color:var(--palm)" id="addTitle">+ เพิ่มรายการผ่อนใหม่</summary>
+      <form novalidate id="af" style="margin-top:14px">
+        <div class="grid2">
+          <label class="f">ชื่อรายการ<input id="an" maxlength="50" required placeholder="เช่น ค่าผ่อนทีวี"></label>
+          <label class="f">ยอดต่องวด (บาท)<input id="aa" type="text" inputmode="decimal" autocomplete="off" data-num required></label>
+          <label class="f">จ่ายงวดแรกวันที่<input id="ad" type="date" value="${P.today}" required></label>
+          <label class="f">ผ่อนกี่เดือน<select id="am">${Array.from({ length: 24 }, (_, i) =>
+            `<option value="${i + 1}" ${i + 1 === 10 ? 'selected' : ''}>${i + 1} เดือน</option>`).join('')}</select></label>
+          <label class="f">ผ่อนกับบัตร<select id="ac"><option value="">— ยังไม่ระบุ —</option>
+            ${cards.map(c => `<option value="${esc(c.name)}">${esc(c.name)}${c.bank ? ' (' + esc(c.bank) + ')' : ''}</option>`).join('')}</select></label>
+        </div>
+        <p class="sub" id="aprev" style="margin:0 0 12px"></p>
+        <div class="row"><button class="btn" id="abtn">เพิ่มรายการผ่อน</button>
+          <button type="button" class="btn line" id="acancel" hidden>ยกเลิกการแก้ไข</button></div>
+      </form>
+    </details>` : ''}
+    <details class="panel" open id="cardBox">
+      <summary>💳 บัตรและธนาคาร (${cards.length})</summary>
+      <div class="cards">${cards.map(c => cardTile(c)).join('')}${cardTile(null, true)}</div>
+      ${can('editor') ? `<details style="margin-top:14px" id="cfBox">
+        <summary style="cursor:pointer;font-weight:600;color:var(--palm)" id="cfTitle">+ เพิ่มบัตร</summary>
+        <form novalidate id="cf" style="margin-top:12px">
+          <div class="grid2">
+            <label class="f">ชื่อบัตร<input id="cn" maxlength="40" required placeholder="เช่น กสิกร, KTC"></label>
+            <label class="f">ธนาคาร / ผู้ออกบัตร<input id="cb" list="cbl" maxlength="60" autocomplete="off"><datalist id="cbl">${BANK_LIST.map(b => `<option value="${esc(b)}">`).join('')}</datalist></label>
+            <label class="f">ผู้ถือบัตร<select id="co"><option value="">—</option>
+              ${(P.names || []).filter(Boolean).concat(['ใช้ร่วมกัน']).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select></label>
+            <label class="f">หมายเหตุ<input id="cno" maxlength="120" placeholder="เช่น ตัดรอบวันที่ 25"></label>
+          </div>
+          <div class="row"><button class="btn" id="cbtn">เพิ่มบัตร</button>
+            <button type="button" class="btn line" id="ccancel" hidden>ยกเลิกการแก้ไข</button></div>
+        </form>
+      </details>` : ''}
+    </details>
+    ${P.info.length ? `<details class="panel" open>
+      <summary style="cursor:pointer;font-weight:600;color:var(--palm)">📋 รายการผ่อนทั้งหมด (${P.info.length})</summary>
+      <div class="list" style="margin-top:10px">${P.info.map(it => `<div class="it">
+          <div><div style="font-weight:600">${esc(it.name)} ${cardChip(cardBy[it.card])}${it.ins ? ' <span class="tag ins">🛡️ เบี้ยประกัน</span>' : ''}</div>
+            <div class="sub" style="margin:0">${baht(it.amount)} × ${it.months} งวด • ${monthShort(it.firstDate)} – ${monthShort(it.lastDate)}</div></div>
+          <div class="num" style="font-weight:600">${baht(it.total)}</div>
+          ${it.ins ? `<div class="acts"><button class="bedit" data-goins="1">🛡️ แก้ที่หน้าประกัน</button></div>` : can('editor') ? `<div class="acts">
+            <button class="bedit" data-iedit="${esc(it.name)}">✏️ แก้ไข</button>
+            <button class="bdel" data-del="${esc(it.name)}" data-sum="${it.total}" data-n="${it.months}">🗑️ ลบ</button></div>` : '<span></span>'}
+        </div>`).join('')}</div>
+    </details>` : ''}
+    <div class="panel">${P.rows.map(rowHtml).join('')}</div>`;
+  bindPay();
+  $('#view').querySelectorAll('[data-goins]').forEach(b => b.onclick = () => go('ins'));
+  $('#pm').onchange = () => showPay($('#pm').value);
+  $('#view').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const name = b.dataset.del;
+    if (!confirm(`ลบรายการผ่อน "${name}" (${b.dataset.n} งวด รวม ${baht(b.dataset.sum)} บาท)?`)) return;
+    b.disabled = true; b.textContent = 'กำลังลบ…';
+    try { drawPlan(await api('deleteInstallment', { name })); S.dash = null; toast(`ลบ "${name}" แล้ว`); }
+    catch (err) { fail(err); b.disabled = false; b.textContent = '🗑️ ลบ'; }
+  });
+  const af = $('#af');
+  if (af) {
+    const prev = () => {
+      const a = Number($('#aa').value) || 0, n = Number($('#am').value), d = $('#ad').value;
+      if (!a || !d) { $('#aprev').textContent = 'ใส่ยอดต่องวดและวันที่งวดแรก แล้วจะเห็นสรุปตรงนี้'; return; }
+      const s = pd(d), e = new Date(s.getFullYear(), s.getMonth() + n - 1, 1);
+      $('#aprev').textContent = `รวม ${baht(a * n)} บาท • ${n} งวด • งวดสุดท้าย ${MF[e.getMonth()]} ${e.getFullYear()}`;
+    };
+    af.querySelectorAll('input,select').forEach(i => i.oninput = prev); prev();
+    let editing = null;
+    const setMode = it => {
+      editing = it ? it.name : null;
+      $('#addTitle').textContent = it ? `✏️ แก้ไขรายการ "${it.name}"` : '+ เพิ่มรายการผ่อนใหม่';
+      $('#abtn').textContent = it ? 'บันทึกการแก้ไข' : 'เพิ่มรายการผ่อน';
+      $('#acancel').hidden = !it;
+      $('#addBox').classList.toggle('editing', !!it);
+      if (it) {
+        $('#an').value = it.name; $('#aa').value = it.amount; $('#ad').value = it.firstDate;
+        $('#am').value = String(Math.min(24, it.months));
+        $('#ac').value = cardBy[it.card] ? it.card : '';
+        $('#addBox').open = true; $('#addBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else af.reset();
+      prev();
+    };
+    $('#acancel').onclick = () => setMode(null);
+    $('#view').querySelectorAll('[data-iedit]').forEach(b => b.onclick = () => setMode(P.info.find(x => x.name === b.dataset.iedit)));
+    af.onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#abtn'); btn.disabled = true;
+      btn.textContent = editing ? 'กำลังบันทึก…' : 'กำลังเพิ่มและสร้างแพลนใหม่… (ประมาณ 1 นาที)';
+      const data = { name: $('#an').value, amount: $('#aa').value, firstDate: $('#ad').value, months: $('#am').value, card: $('#ac').value };
+      try {
+        if (editing) { drawPlan(await api('updateInstallment', Object.assign({ oldName: editing }, data))); toast('บันทึกการแก้ไขแล้ว'); }
+        else { drawPlan(await api('addInstallment', data)); toast('เพิ่มรายการผ่อนแล้ว'); }
+        S.dash = null;
+      } catch (err) { fail(err); btn.disabled = false; btn.textContent = editing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการผ่อน'; }
+    };
+  }
+  const cf = $('#cf');
+  if (cf) {
+    let cEdit = null;
+    const setCard = c => {
+      cEdit = c || null;
+      $('#cfTitle').textContent = c ? `✏️ แก้ไขบัตร "${c.name}"` : '+ เพิ่มบัตร';
+      $('#cbtn').textContent = c ? 'บันทึกการแก้ไข' : 'เพิ่มบัตร';
+      $('#ccancel').hidden = !c; cf.classList.toggle('editing', !!c);
+      $('#cn').value = c ? c.name : ''; $('#cb').value = c ? c.bank : '';
+      $('#co').value = c ? c.owner : ''; $('#cno').value = c ? c.note : '';
+      if (c) { $('#cfBox').open = true; $('#cfBox').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#cn').focus(); }
+    };
+    $('#ccancel').onclick = () => setCard(null);
+    $('#view').querySelectorAll('[data-cedit]').forEach(b => b.onclick = () => setCard(cards.find(c => String(c.row) === b.dataset.cedit)));
+    cf.onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#cbtn'); btn.disabled = true;
+      const data = { name: $('#cn').value, bank: $('#cb').value, owner: $('#co').value, note: $('#cno').value };
+      if (cEdit) Object.assign(data, { row: cEdit.row, oldName: cEdit.name });
+      try { drawPlan(await api('saveCard', data)); toast(cEdit ? 'บันทึกบัตรแล้ว' : 'เพิ่มบัตรแล้ว'); }
+      catch (err) { fail(err); btn.disabled = false; }
+    };
+  }
+  $('#view').querySelectorAll('[data-cdel]').forEach(b => b.onclick = async () => {
+    const c = cards.find(x => String(x.row) === b.dataset.cdel);
+    const n = cardStat(c.name).items.length;
+    const np = pays.filter(x => x.card === c.name).length;
+    if (!confirm(`ลบบัตร "${c.name}"?${n ? `\nรายการผ่อน ${n} รายการที่ใช้บัตรนี้จะกลายเป็น "ยังไม่ระบุบัตร"` : ''}${np ? `\nยอดจ่ายจริงของบัตรนี้ ${np} เดือนจะถูกลบด้วย` : ''}`)) return;
+    b.disabled = true;
+    try { drawPlan(await api('deleteCard', { row: c.row, name: c.name })); toast(`ลบบัตร "${c.name}" แล้ว`); }
+    catch (err) { fail(err); b.disabled = false; }
+  });
+  $('#view').querySelectorAll('.chk').forEach(c => c.onchange = async () => {
+    c.disabled = true;
+    try { drawPlan(await api('setPaid', { month: c.dataset.m, paid: c.checked }));
+          toast(c.checked ? 'บันทึกว่าจ่ายแล้ว' : 'ยกเลิกสถานะจ่ายแล้ว'); S.dash = null; }
+    catch (e) { c.checked = !c.checked; c.disabled = false; fail(e); }
+  });
+}
+
+/* ---------- 🛡️ ประกัน (เช่น ประกันเงินออม) ---------- */
+const FREQ_TH = { 1: 'รายเดือน', 3: 'ราย 3 เดือน', 6: 'ราย 6 เดือน', 12: 'รายปี' };
+VIEWS.ins = async () => {
+  $('#view').innerHTML = '<p class="empty">กำลังโหลด…</p>';
+  drawIns(await api('insurance'));
+};
+function drawIns(D) {
+  const cards = D.cards || [], cardBy = {}; cards.forEach(c => { cardBy[c.name] = c; });
+  const P = D.policies || [];
+  const sumP = f => P.reduce((a, p) => a + f(p), 0);
+  const tPaid = sumP(p => p.paidAmt), tAll = sumP(p => p.totalAmt);
+  const lastAll = P.map(p => p.lastMonth).filter(Boolean).sort().pop();
+  const yearsHtml = p => {
+    const per = Math.max(1, Math.round(12 / p.freq)), out = [];
+    for (let i = 0; i < p.schedule.length; i += per) {
+      const g = p.schedule.slice(i, i + per), n = g.filter(x => x.paid).length;
+      out.push(`<div class="yr"><b>ปีที่ ${i / per + 1}</b>
+        <div class="dots" role="img" aria-label="ปีที่ ${i / per + 1} จ่ายแล้ว ${n} จาก ${g.length} งวด">${g.map(x =>
+          `<i class="${x.paid ? 'p' : p.next && x.k === p.next.k ? 'n' : ''}" title="งวดที่ ${x.k} • ${monthShort(x.month)}${x.paid ? ' • จ่ายแล้ว' : ''}"></i>`).join('')}</div>
+        <span class="c">${monthShort(g[0].month)} – ${monthShort(g[g.length - 1].month)} • ${n}/${g.length}</span></div>`);
+    }
+    return out.join('');
+  };
+  const policyHtml = p => {
+    const c = cardBy[p.card], left = p.total - p.paidN;
+    return `<div class="panel">
+      <div class="ins-h"><div><h3>🛡️ ${esc(p.name)}</h3>
+          <div class="meta">${c ? `ตัดบัตร ${cardChip(c)}` : '<span class="cchip none">ยังไม่ระบุบัตร</span>'}
+            <span>• ${FREQ_TH[p.freq] || ''} • ${Math.round(p.total * p.freq / 12 * 10) / 10} ปี (${p.total} งวด)</span></div></div>
+        ${can('editor') ? `<div class="acts"><button class="bedit" data-insedit="${p.row}">✏️ แก้ไข</button>
+          <button class="bdel" data-insdel="${p.row}">🗑️ ลบ</button></div>` : ''}</div>
+      ${kpis([
+        { icon: '💵', label: 'เบี้ยต่องวด', value: baht(p.premium), tone: 'gold', sub: FREQ_TH[p.freq] },
+        { icon: '✅', label: 'จ่ายแล้ว', value: `${p.paidN} / ${p.total} งวด`, txt: true, tone: 'green',
+          bar: p.total ? p.paidN / p.total * 100 : 0, sub: `${p.total ? Math.round(p.paidN / p.total * 100) : 0}%` },
+        { icon: '🏦', label: 'เบี้ยที่จ่ายแล้ว', value: baht(p.paidAmt), tone: 'blue', sub: `จากทั้งหมด ${baht(p.totalAmt)}` },
+        { icon: '⏳', label: 'เบี้ยคงเหลือ', value: baht(p.totalAmt - p.paidAmt), tone: 'red',
+          sub: left ? `อีก ${left} งวด • ครบ ${monthName(p.lastMonth)}` : 'จ่ายครบแล้ว 🎉' },
+      ])}
+      ${p.next ? `<div class="ins-next">📅 งวดถัดไป: <b>งวดที่ ${p.next.k}</b> • ${dayText(p.next.payday)} • <b class="num">${baht(p.premium)}</b> บาท
+        ${c ? `รวมอยู่ในยอดผ่อนบัตร ${esc(c.name)}` : ''}</div>` : ''}
+      ${p.note ? `<p class="sub" style="margin:0 0 10px">📝 ${esc(p.note)}</p>` : ''}
+      <details ${P.length === 1 ? 'open' : ''}><summary style="cursor:pointer;font-weight:600;color:var(--palm)">📆 ตารางงวดรายปี</summary>
+        <div class="yrs" style="margin-top:10px">${yearsHtml(p)}</div></details>
+      ${!p.linked && left ? '<p class="sub" style="margin:10px 0 0;color:var(--minus)">⚠️ ยังไม่ได้รวมเข้ายอดผ่อนบัตร กด ✏️ แก้ไข แล้วบันทึกอีกครั้ง</p>' : ''}
+    </div>`;
+  };
+  const defCard = (cards.find(c => /central|เซ็นทรัล/i.test(c.name + ' ' + c.bank)) || {}).name || '';
+  $('#view').innerHTML = `
+    ${pageHero('ins', 'ประกัน', 'เบี้ยที่ตัดบัตรเครดิตจะรวมเข้ายอดผ่อนของบัตรนั้นให้อัตโนมัติ งวดที่ถึงวันเงินเดือนเข้าแล้วนับเป็นจ่ายแล้ว')}
+    ${P.length ? kpis([
+      { icon: '🛡️', label: 'เบี้ยเฉลี่ยต่อเดือน', value: baht(Math.round(sumP(p => p.premium / p.freq))), tone: 'gold', sub: `${P.length} กรมธรรม์` },
+      { icon: '✅', label: 'จ่ายเบี้ยไปแล้ว', value: baht(tPaid), tone: 'green', bar: tAll ? tPaid / tAll * 100 : 0,
+        sub: `${tAll ? Math.round(tPaid / tAll * 100) : 0}% ของเบี้ยทั้งหมด` },
+      { icon: '⏳', label: 'เบี้ยคงเหลือ', value: baht(tAll - tPaid), tone: 'red', sub: `เบี้ยทั้งหมด ${baht(tAll)}` },
+      { icon: '🏁', label: 'จ่ายเบี้ยครบ', value: lastAll ? monthName(lastAll) : '-', txt: true, tone: 'blue', sub: 'งวดสุดท้าย' },
+    ]) : '<p class="empty">ยังไม่มีกรมธรรม์ เพิ่มจากฟอร์มด้านล่าง</p>'}
+    ${P.map(policyHtml).join('')}
+    ${can('editor') ? `<details class="panel" id="insBox" ${P.length ? '' : 'open'}>
+      <summary style="cursor:pointer;font-weight:600;color:var(--palm)" id="insTitle">+ เพิ่มกรมธรรม์</summary>
+      <form novalidate id="insf" style="margin-top:14px">
+        <div class="grid2">
+          <label class="f">ชื่อกรมธรรม์<input id="in_n" maxlength="50" required value="ประกันเงินออม"></label>
+          <label class="f">เบี้ยต่องวด (บาท)<input id="in_p" type="text" inputmode="decimal" autocomplete="off" data-num required value="2687"></label>
+          <label class="f">จ่ายเบี้ย<select id="in_f">${Object.keys(FREQ_TH).map(k => `<option value="${k}">${FREQ_TH[k]}</option>`).join('')}</select></label>
+          <label class="f">ระยะเวลาจ่ายเบี้ย (ปี)<input id="in_y" type="text" inputmode="numeric" data-num required value="7"></label>
+          <label class="f">จ่ายไปแล้วกี่งวด (นับงวดเดือนนี้ด้วยถ้าเงินเดือนเข้าแล้ว)<input id="in_d" type="text" inputmode="numeric" data-num required value="9"></label>
+          <label class="f">ตัดบัตร<select id="in_c"><option value="">— ไม่ได้ตัดบัตร —</option>
+            ${cards.map(c => `<option value="${esc(c.name)}" ${c.name === defCard ? 'selected' : ''}>${esc(c.name)}${c.bank ? ' (' + esc(c.bank) + ')' : ''}</option>`).join('')}</select></label>
+        </div>
+        <label class="f">หมายเหตุ<input id="in_o" maxlength="200" placeholder="เช่น เลขกรมธรรม์, บริษัทประกัน, ทุนประกัน"></label>
+        <p class="sub" id="in_prev" style="margin:0 0 12px"></p>
+        <div class="row"><button class="btn" id="in_b">เพิ่มกรมธรรม์</button>
+          <button type="button" class="btn line" id="in_x" hidden>ยกเลิกการแก้ไข</button></div>
+      </form>
+    </details>` : ''}`;
+
+  const f = $('#insf');
+  let editing = null;
+  if (f) {
+    const num = id => Number(cleanNum($(id).value)) || 0;
+    const prev = () => {
+      const pr = num('#in_p'), fq = Number($('#in_f').value), y = num('#in_y'), d = Math.floor(num('#in_d'));
+      const tot = Math.round(y * 12 / fq);
+      if (!pr || !tot) { $('#in_prev').textContent = 'ใส่เบี้ยต่องวดและระยะเวลา แล้วจะเห็นสรุปตรงนี้'; return; }
+      $('#in_prev').textContent = `ทั้งหมด ${tot} งวด • เบี้ยรวม ${baht(pr * tot)} บาท • จ่ายแล้ว ${Math.min(d, tot)} งวด (${baht(pr * Math.min(d, tot))}) • เหลือ ${Math.max(0, tot - d)} งวด (${baht(pr * Math.max(0, tot - d))})`;
+    };
+    f.querySelectorAll('input,select').forEach(i => i.addEventListener('input', prev)); prev();
+    const setEdit = p => {
+      editing = p || null;
+      $('#insTitle').textContent = p ? `✏️ แก้ไข "${p.name}"` : '+ เพิ่มกรมธรรม์';
+      $('#in_b').textContent = p ? 'บันทึกการแก้ไข' : 'เพิ่มกรมธรรม์';
+      $('#in_x').hidden = !p; $('#insBox').classList.toggle('editing', !!p);
+      if (p) {
+        $('#in_n').value = p.name; $('#in_p').value = p.premium; $('#in_f').value = String(p.freq);
+        $('#in_y').value = Math.round(p.total * p.freq / 12 * 10) / 10; $('#in_d').value = p.paidN;
+        $('#in_c').value = cardBy[p.card] ? p.card : ''; $('#in_o').value = p.note;
+        $('#insBox').open = true; $('#insBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else { f.reset(); $('#in_c').value = defCard; }
+      prev();
+    };
+    $('#in_x').onclick = () => setEdit(null);
+    $('#view').querySelectorAll('[data-insedit]').forEach(b => b.onclick = () => setEdit(P.find(p => String(p.row) === b.dataset.insedit)));
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#in_b'); btn.disabled = true; btn.textContent = 'กำลังบันทึกและรวมเข้าแพลนผ่อนบัตร… (ประมาณ 1 นาที)';
+      const data = { name: $('#in_n').value, premium: $('#in_p').value, freq: $('#in_f').value, years: cleanNum($('#in_y').value),
+                     paid: cleanNum($('#in_d').value), card: $('#in_c').value, note: $('#in_o').value };
+      if (editing) Object.assign(data, { row: editing.row, oldName: editing.name });
+      try { drawIns(await api('saveInsurance', data)); S.dash = null; toast(editing ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มกรมธรรม์แล้ว'); }
+      catch (err) { fail(err); btn.disabled = false; btn.textContent = editing ? 'บันทึกการแก้ไข' : 'เพิ่มกรมธรรม์'; }
+    };
+  }
+  $('#view').querySelectorAll('[data-insdel]').forEach(b => b.onclick = async () => {
+    const p = P.find(x => String(x.row) === b.dataset.insdel);
+    if (!confirm(`ลบกรมธรรม์ "${p.name}"?\nเบี้ยที่รวมอยู่ในยอดผ่อนบัตรจะถูกเอาออกด้วย`)) return;
+    b.disabled = true;
+    try { drawIns(await api('deleteInsurance', { row: p.row, name: p.name })); S.dash = null; toast('ลบกรมธรรม์แล้ว'); }
+    catch (err) { fail(err); b.disabled = false; }
+  });
+}
+
+/* ---------- สมุดรายรับ-รายจ่าย (สวนปาล์ม / ปล่อยเช่าคอนโด) ---------- */
+const LEDGER_PREF = {};   // จำประเภทที่เลือกล่าสุดของแต่ละสมุด
+const ledgerView = book => async () => {
+  $('#view').innerHTML = '<p class="empty">กำลังโหลด…</p>';
+  drawLedger(await api('ledger', { book }));
+};
+VIEWS.palm = ledgerView('palm');
+VIEWS.condo = ledgerView('condo');
+
+function drawLedger(R) {
+  const B = R.book, T = R.totals;
+  const type = LEDGER_PREF[B.key] || 'expense';
+  const CAT_COLORS = ['#B83A2E', '#C9811F', '#7A5C99', '#2C7A9B', '#5E6B63', '#9C6644', '#3F7D5A', '#A23B72'];
+
+  // กราฟรายจ่ายแยกหมวด
+  const cats = R.expenseByCat;
+  const catHtml = cats.length ? `<div class="hb">${cats.map((c, i) => `
+      <span>${esc(c.name)}</span>
+      <div class="track" role="img" aria-label="${esc(c.name)} ${baht(c.amount)} บาท"><i style="width:${(c.amount / cats[0].amount * 100).toFixed(1)}%;background:${CAT_COLORS[i % CAT_COLORS.length]}"></i></div>
+      <span class="num">${baht(c.amount)} <span class="pct">${T.expense ? Math.round(c.amount / T.expense * 100) : 0}%</span></span>`).join('')}</div>`
+    : '<p class="empty">ยังไม่มีรายจ่าย</p>';
+
+  // กราฟรายเดือน (12 เดือนล่าสุด)
+  const bm = R.byMonth.slice(-12);
+  const mmax = Math.max(1, ...bm.map(m => Math.max(m.income, m.expense)));
+  const monthHtml = bm.length ? `<div class="mb">${bm.map(m => `
+      <div class="c" title="${monthName(m.month + '-01')}: รับ ${baht(m.income)} / จ่าย ${baht(m.expense)}">
+        <div class="bars"><i class="in" style="height:${m.income / mmax * 130}px"></i><i class="out" style="height:${m.expense / mmax * 130}px"></i></div>
+        <span>${monthShort(m.month + '-01')}</span></div>`).join('')}</div>
+      <div class="legend"><span><i style="background:var(--plus)"></i>รายรับ</span><span><i style="background:var(--minus)"></i>รายจ่าย</span></div>`
+    : '<p class="empty">ยังไม่มีข้อมูล</p>';
+
+  // รายการ แยกตามเดือน
+  const groups = {};
+  R.entries.forEach(e => { const k = (e.date || '0000-00').slice(0, 7); (groups[k] = groups[k] || []).push(e); });
+  const list = Object.keys(groups).sort().reverse().map(k => {
+    const g = groups[k];
+    const net = g.reduce((a, e) => a + (e.type === 'expense' ? -e.amount : e.amount), 0);
+    return `<div class="mh"><span>${k === '0000-00' ? 'ไม่มีวันที่' : monthName(k + '-01')}</span>
+        <span class="num ${net < 0 ? 'neg' : ''}">สุทธิ ${baht(net)}</span></div>` +
+      g.map(e => `<div class="it">
+        <div><div>${dayText(e.date)}<span class="cat">${esc(e.category)}</span></div>
+          <div class="sub" style="margin:0">${esc(e.note)}</div></div>
+        <div class="num ${e.type === 'expense' ? 'neg' : 'pos'}" style="font-weight:600">${e.type === 'expense' ? '−' : '+'}${baht(e.amount)}</div>
+        ${can('editor') ? `<div class="acts">
+          <button class="bedit" data-ledit="${e.row}" aria-label="แก้ไขรายการ ${dayText(e.date)}">✏️ แก้ไข</button>
+          <button class="bdel x" data-row="${e.row}" data-date="${e.date}" data-amt="${e.amount}" aria-label="ลบรายการ ${dayText(e.date)}">🗑️ ลบ</button></div>` : '<span></span>'}
+      </div>`).join('');
+  }).join('');
+
+  $('#view').innerHTML = `
+    ${pageHero(B.key, esc(B.title), 'จดทั้งรายรับและรายจ่าย ยอดสุทธิของแต่ละเดือนจะไปรวมในหน้าภาพรวม')}
+    ${(() => {
+      const tm = R.byMonth.find(m => m.month === (R.today || '').slice(0, 7)) || { income: 0, expense: 0 };
+      return kpis([
+        { icon: '💵', label: 'รายรับรวม', value: baht(T.income), tone: 'green', sub: `${R.entries.filter(e => e.type === 'income').length} รายการ` },
+        { icon: '🧾', label: 'รายจ่ายรวม', value: baht(T.expense), tone: 'red', sub: `${R.entries.filter(e => e.type === 'expense').length} รายการ` },
+        { icon: '💰', label: 'คงเหลือสุทธิ', value: baht(T.net), tone: 'blue', cls: T.net < 0 ? 'neg' : '',
+          sub: T.income ? `กำไร ${Math.round(T.net / T.income * 100)}% ของรายรับ` : '' },
+        { icon: '📅', label: 'เดือนนี้ (สุทธิ)', value: baht(tm.income - tm.expense), tone: 'gold',
+          cls: tm.income - tm.expense < 0 ? 'neg' : '', sub: `รับ ${baht(tm.income)} • จ่าย ${baht(tm.expense)}` },
+      ]);
+    })()}
+    ${R.invest ? investHtml(R) : ''}
+    ${can('editor') ? `<form novalidate class="panel" id="lf">
+      <div class="seg" role="radiogroup" aria-label="ประเภทรายการ">
+        <label><input type="radio" name="lt" value="income" ${type === 'income' ? 'checked' : ''}><span>รายรับ</span></label>
+        <label><input type="radio" name="lt" value="expense" ${type === 'expense' ? 'checked' : ''}><span>รายจ่าย</span></label>
+      </div>
+      <div class="grid2">
+        <label class="f">วันที่<input type="date" id="ld" value="${R.today}" required></label>
+        <label class="f">ยอด (บาท)<input type="text" id="la" inputmode="decimal" autocomplete="off" data-num required></label>
+        <label class="f">หมวด<input id="lc" list="lcl" maxlength="40" required autocomplete="off"><datalist id="lcl"></datalist></label>
+        <label class="f">หมายเหตุ<input id="ln" maxlength="200"></label>
+      </div>
+      <div class="row"><button class="btn" id="lbtn"></button>
+        <button type="button" class="btn line" id="lcancel" hidden>ยกเลิกการแก้ไข</button></div>
+    </form>` : ''}
+    <div class="panel charts">
+      <div><h3>รายจ่ายแยกหมวด</h3>${catHtml}</div>
+      <div><h3>รายรับ-รายจ่ายรายเดือน</h3>${monthHtml}</div>
+    </div>
+    <div class="panel list">
+      ${list || '<p class="empty">ยังไม่มีรายการ เริ่มจดรายการแรกจากฟอร์มด้านบน</p>'}
+    </div>`;
+
+  const f = $('#lf');
+  if (f) {
+    const setType = t => {
+      LEDGER_PREF[B.key] = t;
+      const cs = t === 'income' ? B.incomeCats : B.expenseCats;
+      $('#lcl').innerHTML = cs.map(c => `<option value="${esc(c)}">`).join('');
+      const other = t === 'income' ? B.expenseCats : B.incomeCats, v = $('#lc').value;
+      if (!v || (other.includes(v) && !cs.includes(v))) $('#lc').value = cs[0];
+      $('#lbtn').textContent = editing ? 'บันทึกการแก้ไข' : t === 'income' ? 'บันทึกรายรับ' : 'บันทึกรายจ่าย';
+    };
+    let editing = null;
+    const setEdit = en => {
+      editing = en || null;
+      f.classList.toggle('editing', !!en);
+      $('#lcancel').hidden = !en;
+      if (en) {
+        f.querySelector(`input[name=lt][value=${en.type}]`).checked = true;
+        $('#ld').value = en.date; $('#la').value = en.amount; $('#lc').value = en.category; $('#ln').value = en.note;
+        setType(en.type);
+        f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        $('#la').value = ''; $('#ln').value = ''; $('#ld').value = R.today;
+        setType(f.querySelector('input[name=lt]:checked').value);
+      }
+    };
+    $('#lcancel').onclick = () => setEdit(null);
+    $('#view').querySelectorAll('[data-ledit]').forEach(b => b.onclick = () => setEdit(R.entries.find(x => String(x.row) === b.dataset.ledit)));
+    f.querySelectorAll('input[name=lt]').forEach(r => r.onchange = () => setType(r.value));
+    setType(type);
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const t = f.querySelector('input[name=lt]:checked').value;
+      const btn = $('#lbtn'); btn.disabled = true;
+      const data = { book: B.key, type: t, date: $('#ld').value, amount: $('#la').value,
+                     category: $('#lc').value, note: $('#ln').value };
+      try {
+        if (editing) {
+          drawLedger(await api('updateLedger', Object.assign({ row: editing.row, oldDate: editing.date, oldAmount: editing.amount }, data)));
+          toast('บันทึกการแก้ไขแล้ว');
+        } else {
+          drawLedger(await api('addLedger', data));
+          toast(t === 'income' ? 'บันทึกรายรับแล้ว' : 'บันทึกรายจ่ายแล้ว');
+        }
+        S.dash = null;
+      } catch (err) { fail(err); btn.disabled = false; }
+    };
+  }
+  if (R.invest) bindInvest(R);
+  $('#view').querySelectorAll('.x').forEach(b => b.onclick = async () => {
+    if (!confirm(`ลบรายการ ${dayText(b.dataset.date)} ยอด ${baht(b.dataset.amt)} บาท?`)) return;
+    try { drawLedger(await api('deleteLedger', { book: B.key, row: b.dataset.row, date: b.dataset.date, amount: b.dataset.amt }));
+          toast('ลบรายการแล้ว'); S.dash = null; }
+    catch (err) { fail(err); }
+  });
+}
+
+/* ---------- เงินลงทุน + การคืนทุน (ปาล์ม: ค่าที่ดิน / คอนโด: ซื้อของเข้าห้อง) ---------- */
+function investText(R) {
+  return Object.assign({ title: 'ซื้อของเข้าห้อง', inc: 'ค่าเช่า', other: 'ค่าใช้จ่ายอื่น', icon: '🛋️', hint: 'เช่น แอร์ เตียง ตู้เย็น' },
+    R.invest.text || {});
+}
+function investCalc(R) {
+  const I = R.invest, X = investText(R);
+  const inv = I.total, got = I.returned;               // ได้คืน = รายรับ − ค่าใช้จ่ายอื่น (ไม่นับเงินลงทุน)
+  const left = Math.max(0, inv - got);
+  const pct = inv ? Math.min(100, Math.max(0, got / inv * 100)) : 0;
+  const avg = I.months ? got / I.months : 0;
+  let pay, eta = '';
+  if (!inv) pay = 'ยังไม่มีเงินลงทุน';
+  else if (got >= inv) pay = 'คืนทุนครบแล้ว 🎉';
+  else if (avg > 0) {
+    const mm = Math.ceil(left / avg), y = Math.floor(mm / 12), r = mm % 12;
+    pay = `อีกประมาณ ${y ? y + ' ปี ' : ''}${r ? r + ' เดือน' : ''}`.trim();
+    const d = new Date((R.today || '') + 'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth() + mm);
+    if (!isNaN(d)) eta = monthName(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+  } else pay = `ยังคำนวณไม่ได้ (ยังไม่มีกำไรจาก${X.inc})`;
+  const yieldY = inv && avg > 0 ? avg * 12 / inv * 100 : null;
+  return { inv, got, left, pct, avg, pay, eta, yieldY };
+}
+function investHtml(R) {
+  const c = investCalc(R), I = R.invest, X = investText(R), B = R.book;
+  const line = (k, v, sub, cls) => `<div class="ln"><span class="k">${k}${sub ? ` <span class="sub" style="margin:0;font-size:.8rem">${sub}</span>` : ''}</span><span class="num ${cls || ''}">${baht(v)}</span></div>`;
+  const n = I.buys.length + I.items.length;
+  const asExpense = (B.expenseCats || []).includes(I.cat);       // คอนโด: จดค่าซื้อของเป็นรายจ่าย
+  return `<div class="panel" id="invBox">
+    <div class="fhead"><h3>💼 เงินลงทุนและการคืนทุน</h3>
+      ${can('editor') ? `<div class="acts">
+        ${asExpense ? `<button class="bedit" id="ivAdd">➕ จด${esc(X.title)}</button>` : ''}
+        <button class="bedit" id="ivNew">➕ เพิ่มเงินลงทุน</button></div>` : ''}</div>
+    <div style="margin-top:12px">${kpis([
+      { icon: X.icon, label: `ลงทุนทั้งหมด`, value: baht(c.inv), tone: 'palm', sub: esc(X.title) },
+      { icon: '✅', label: I.gross ? `ได้คืนแล้ว (รายได้${X.inc})` : 'ได้คืนแล้ว (สุทธิ)', value: baht(c.got), tone: 'green', cls: c.got < 0 ? 'neg' : '',
+        bar: c.pct, sub: `คืนทุนแล้ว ${c.pct.toFixed(1)}%` },
+      { icon: '⏳', label: 'ยังไม่คืนทุน', value: baht(c.left), tone: 'red', sub: c.pay },
+      { icon: '📈', label: 'ผลตอบแทนต่อปี', value: c.yieldY === null ? '–' : c.yieldY.toFixed(1) + '%', tone: 'gold',
+        sub: `เฉลี่ยเดือนละ ${baht(Math.round(c.avg))} (${I.months} เดือน)` },
+    ])}</div>
+    ${c.eta ? `<p class="sub" style="margin:-6px 0 12px">🏁 คาดว่าคืนทุนครบประมาณ <b>${c.eta}</b></p>` : ''}
+    <div style="max-width:560px">
+      ${line(`💵 รายรับ (${esc(X.inc)})`, I.income, '', 'pos')}
+      ${I.gross ? '' : line(`🧾 ${esc(X.other)}`, -I.otherExp, '(ไม่รวมเงินลงทุน)', 'neg')}
+      <div class="ln sum"><span>ได้คืนแล้ว${I.gross ? ' (ไม่หักค่าใช้จ่าย)' : ' (สุทธิ)'}</span><span class="num">${baht(c.got)}</span></div>
+    </div>
+    ${can('editor') ? `<form novalidate id="ivf" class="panel editing" style="margin:14px 0 0;box-shadow:none" hidden>
+      <h3 style="margin-top:0" id="ivfT">➕ เพิ่มเงินลงทุน</h3>
+      <div class="grid2">
+        <label class="f">รายการ<input id="ivn" maxlength="60" required placeholder="${esc(X.hint)}"></label>
+        <label class="f">ยอด (บาท)<input id="iva" type="text" inputmode="decimal" autocomplete="off" data-num required></label>
+        <label class="f">หมายเหตุ<input id="ivo" maxlength="200"></label>
+      </div>
+      <div class="row"><button class="btn" id="ivb">บันทึก</button><button type="button" class="btn line" id="ivc">ยกเลิก</button></div>
+    </form>` : ''}
+    <details style="margin-top:14px" ${n ? '' : 'open'}>
+      <summary style="cursor:pointer;font-weight:600;color:var(--palm)">${X.icon} รายการเงินลงทุน (${n})</summary>
+      <div class="list" style="margin-top:8px">
+        ${I.items.map(x => `<div class="it">
+          <div><div style="font-weight:600">${esc(x.name)}</div><div class="sub" style="margin:0">${esc(x.note) || '-'}</div></div>
+          <div class="num" style="font-weight:600">${baht(x.amount)}</div>
+          ${can('editor') ? `<div class="acts"><button class="bedit" data-iv-edit="${x.row}">✏️ แก้ไข</button>
+            <button class="bdel" data-iv-del="${x.row}">🗑️ ลบ</button></div>` : '<span></span>'}</div>`).join('')}
+        ${I.buys.map(x => `<div class="it">
+          <div><div style="font-weight:600">${dayText(x.date)}</div><div class="sub" style="margin:0">${esc(x.note) || '-'} (จดเป็นรายจ่าย)</div></div>
+          <div class="num" style="font-weight:600">${baht(x.amount)}</div><span></span></div>`).join('')}
+        ${n ? '' : `<p class="empty" style="padding:8px 0">ยังไม่มี กด "➕ เพิ่มเงินลงทุน" ${esc(X.hint)}</p>`}
+      </div>
+      ${I.buys.length ? '<p class="sub" style="margin:8px 0 0">รายการที่จดเป็นรายจ่าย แก้ไขหรือลบได้ที่รายการด้านล่างของหน้า</p>' : ''}
+    </details>
+  </div>`;
+}
+function bindInvest(R) {
+  const B = R.book, I = R.invest, X = investText(R);
+  const add = $('#ivAdd');
+  if (add) add.onclick = () => {
+    const f = $('#lf'); if (!f) return;
+    const r = f.querySelector('input[name=lt][value=expense]');
+    r.checked = true; r.dispatchEvent(new Event('change'));
+    $('#lc').value = I.cat; $('#la').value = ''; $('#ln').value = '';
+    $('#ln').placeholder = X.hint;
+    f.scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#la').focus();
+  };
+  const f = $('#ivf');
+  let editing = null;
+  const open = x => {
+    if (!f) return;
+    editing = x || null; f.hidden = false;
+    $('#ivfT').textContent = x ? '✏️ แก้ไขเงินลงทุน' : '➕ เพิ่มเงินลงทุน';
+    $('#ivn').value = x ? x.name : ''; $('#iva').value = x ? x.amount : ''; $('#ivo').value = x ? x.note : '';
+    f.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#ivn').focus();
+  };
+  const nb = $('#ivNew'); if (nb) nb.onclick = () => open(null);
+  if (f) {
+    $('#ivc').onclick = () => { f.hidden = true; editing = null; };
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#ivb'); btn.disabled = true;
+      const d = { book: B.key, name: $('#ivn').value, amount: $('#iva').value, note: $('#ivo').value };
+      if (editing) Object.assign(d, { row: editing.row, oldName: editing.name, oldAmount: editing.amount });
+      try { drawLedger(await api('saveInvest', d)); toast(editing ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มเงินลงทุนแล้ว'); }
+      catch (err) { fail(err); btn.disabled = false; }
+    };
+  }
+  $('#view').querySelectorAll('[data-iv-edit]').forEach(b => b.onclick = () => open(I.items.find(i => String(i.row) === b.dataset.ivEdit)));
+  $('#view').querySelectorAll('[data-iv-del]').forEach(b => b.onclick = async () => {
+    const x = I.items.find(i => String(i.row) === b.dataset.ivDel);
+    if (!confirm(`ลบรายการ "${x.name}" ยอด ${baht(x.amount)} บาท?`)) return;
+    try { drawLedger(await api('deleteInvest', { book: B.key, row: x.row, name: x.name, amount: x.amount })); toast('ลบรายการแล้ว'); }
+    catch (err) { fail(err); }
+  });
+}
+
+/* ---------- ผู้ใช้งาน ---------- */
+VIEWS.users = async () => {
+  $('#view').innerHTML = '<p class="empty">กำลังโหลด…</p>';
+  drawUsers(await api('users'));
+};
+function drawUsers(U) {
+  const roleOpts = sel => Object.keys(ROLE_TH).map(r => `<option value="${r}" ${r === sel ? 'selected' : ''}>${ROLE_TH[r]}</option>`).join('');
+  $('#view').innerHTML = `
+    ${pageHero('users', 'ผู้ใช้งาน', 'เพิ่มคนที่ใช้เว็บนี้ และกำหนดว่าแต่ละคนแก้ไขได้แค่ไหน')}
+    ${kpis([
+      { icon: '👥', label: 'ผู้ใช้ทั้งหมด', value: U.length, tone: 'palm', sub: 'บัญชี' },
+      { icon: '✅', label: 'ใช้งานอยู่', value: U.filter(u => u.active).length, tone: 'green',
+        bar: U.length ? U.filter(u => u.active).length / U.length * 100 : 0, sub: `ปิดอยู่ ${U.filter(u => !u.active).length}` },
+      { icon: '✏️', label: 'แก้ไขข้อมูลได้', value: U.filter(u => u.role !== 'viewer').length, tone: 'gold', sub: 'ผู้แก้ไข + ผู้ดูแล' },
+      { icon: '👑', label: 'ผู้ดูแลระบบ', value: U.filter(u => u.role === 'admin').length, tone: 'blue', sub: 'จัดการผู้ใช้ได้' },
+    ])}
+    <div class="panel" style="overflow-x:auto">
+      <table><thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อที่แสดง</th><th>สิทธิ์</th><th>สถานะ</th><th></th></tr></thead>
+      <tbody>${U.map(u => `<tr>
+        <td>${esc(u.username)}</td><td>${esc(u.name)}</td><td>${ROLE_TH[u.role] || esc(u.role)}</td>
+        <td>${u.active ? 'ใช้งาน' : '<span class="neg">ปิดอยู่</span>'}</td>
+        <td><button class="btn line" data-u="${esc(u.username)}" style="padding:4px 10px">แก้ไข</button></td></tr>`).join('')}</tbody></table>
+    </div>
+    <form novalidate class="panel" id="uf">
+      <h3 style="margin-top:0" id="ufTitle">เพิ่มผู้ใช้</h3>
+      <div class="grid2">
+        <label class="f">ชื่อผู้ใช้ (a-z, 0-9, . _ -)<input id="uu" required minlength="3" maxlength="30" autocomplete="off"></label>
+        <label class="f">ชื่อที่แสดง<input id="un" maxlength="60"></label>
+        <label class="f">สิทธิ์<select id="ur">${roleOpts('viewer')}</select></label>
+        <label class="f" id="upL">รหัสผ่าน (อย่างน้อย 8 ตัว)<input id="up" type="password" autocomplete="new-password"></label>
+      </div>
+      <label class="row" style="margin-bottom:14px"><input type="checkbox" id="ua" checked> เปิดใช้งานบัญชีนี้</label>
+      <div class="row"><button class="btn" id="ufBtn">เพิ่มผู้ใช้</button><button type="button" class="btn line" id="ufReset">ล้างฟอร์ม</button></div>
+    </form>
+    <div class="panel">
+      <h3 style="margin-top:0">ปรับโครงสร้างชีต</h3>
+      <p class="sub">ใช้เมื่อเพิ่มรายการผ่อนใหม่ในชีต หรือเปลี่ยนค่าใช้จ่ายประจำในโค้ด ข้อมูลที่กรอกไว้จะไม่หาย</p>
+      <button class="btn line" id="rebuild">ปรับโครงสร้างชีตใหม่</button>
+    </div>`;
+  let editing = null;
+  const reset = () => {
+    editing = null; $('#uf').reset(); $('#uu').readOnly = false;
+    $('#ufTitle').textContent = 'เพิ่มผู้ใช้'; $('#ufBtn').textContent = 'เพิ่มผู้ใช้';
+    $('#upL').firstChild.textContent = 'รหัสผ่าน (อย่างน้อย 8 ตัว)';
+  };
+  $('#ufReset').onclick = reset;
+  $('#view').querySelectorAll('[data-u]').forEach(b => b.onclick = () => {
+    const u = U.find(x => x.username === b.dataset.u); editing = u.username;
+    $('#uu').value = u.username; $('#uu').readOnly = true; $('#un').value = u.name;
+    $('#ur').value = u.role; $('#ua').checked = u.active; $('#up').value = '';
+    $('#ufTitle').textContent = 'แก้ไข ' + u.username; $('#ufBtn').textContent = 'บันทึกการแก้ไข';
+    $('#upL').firstChild.textContent = 'ตั้งรหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)';
+    $('#uf').scrollIntoView({ behavior: 'smooth' });
+  });
+  $('#uf').onsubmit = async e => {
+    e.preventDefault();
+    try {
+      drawUsers(await api('saveUser', { username: $('#uu').value, name: $('#un').value, role: $('#ur').value,
+                                        active: $('#ua').checked, password: $('#up').value }));
+      toast(editing ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มผู้ใช้แล้ว');
+    } catch (err) { fail(err); }
+  };
+  $('#rebuild').onclick = async () => {
+    if (!confirm('ปรับโครงสร้างชีตใหม่ตอนนี้? ใช้เวลาประมาณ 1 นาที')) return;
+    try { await api('rebuild'); S.dash = null; toast('ปรับโครงสร้างชีตแล้ว'); } catch (err) { fail(err); }
+  };
+}
+
+/* ---------- เริ่ม ---------- */
+boot();
+</script>
+</body>
+</html>

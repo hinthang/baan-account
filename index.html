@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>บัญชีบ้าน</title>
+<meta name="description" content="บัญชีบ้าน: รายรับ ค่าผ่อนบัตร ประกัน และค่าใช้จ่ายของบ้านในที่เดียว">
+<meta name="theme-color" content="#0A2550">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="บัญชีบ้าน">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23D89B0B'/%3E%3Ctext x='32' y='45' font-size='38' font-weight='700' font-family='sans-serif' fill='%230B2A5B' text-anchor='middle'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E">
+<style>
+  /* หน้าห่อเว็บแอป: เปิด Apps Script เต็มจอ พร้อมหน้าโหลดสีเดียวกับแอป */
+  :root { --navy: #0A2550; --blue: #1A56DB; --gold: #F4C553; }
+  html, body { margin: 0; height: 100%; background: var(--navy); color: #fff;
+    font-family: 'IBM Plex Sans Thai', 'Noto Sans Thai', Tahoma, sans-serif; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #F2F5FA; opacity: 0; transition: opacity .3s; }
+  #app.ready { opacity: 1; }
+  #load { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(circle at 85% 10%, rgba(244,197,83,.22), transparent 32%), linear-gradient(150deg, #0A2550, #123B7A); }
+  #load.hide { display: none; }
+  .logo { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 18px; display: grid; place-items: center;
+    background: linear-gradient(135deg, #F4C553, #D89B0B); color: #0B2A5B; font-size: 2.2rem; font-weight: 700; }
+  h1 { margin: 0 0 6px; font-size: 1.6rem; font-weight: 600; }
+  p { margin: 0 0 18px; opacity: .8; }
+  .spin { width: 28px; height: 28px; margin: 0 auto 18px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: var(--gold);
+    animation: r 1s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  a.btn { display: inline-block; color: #0B2A5B; background: var(--gold); padding: 10px 20px; border-radius: 999px;
+    font-weight: 600; text-decoration: none; }
+  a.btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  #slow { display: none; } #slow.on { display: block; }
+</style>
+</head>
+<body>
+<div id="load" role="status">
+  <div>
+    <div class="logo" aria-hidden="true">฿</div>
+    <h1>บัญชีบ้าน</h1>
+    <p>กำลังเปิด…</p>
+    <div class="spin" aria-hidden="true"></div>
+    <div id="slow"><p>ถ้าหน้าไม่ขึ้น กดเปิดเว็บโดยตรงได้</p><a class="btn" id="direct" href="#" target="_top">เปิดบัญชีบ้าน</a></div>
+  </div>
+</div>
+<iframe id="app" title="บัญชีบ้าน" allow="clipboard-write"></iframe>
+<script>
+  // ⚙️ ลิงก์เว็บแอปที่ได้จาก Apps Script (ทำให้ใช้งานได้ → จัดการ → URL ของเว็บแอป ลงท้ายด้วย /exec)
+  const APP_URL = 'https://script.google.com/macros/s/AKfycbwYrpjzbNav0-jYOUabM-OSMF4K0SEpTom7H_z_dYtc2Wsczj6PzjACPIE3aVkb9v7X/exec';
+
+  const f = document.getElementById('app'), load = document.getElementById('load');
+  document.getElementById('direct').href = APP_URL;
+  f.addEventListener('load', () => { f.classList.add('ready'); load.classList.add('hide'); });
+  f.src = APP_URL;
+  // ถ้าโหลดช้าเกิน 8 วินาที (เช่น เบราว์เซอร์บล็อก iframe) ให้ปุ่มเปิดตรง
+  setTimeout(() => { if (!f.classList.contains('ready')) document.getElementById('slow').classList.add('on'); }, 8000);
+</script>
+</body>

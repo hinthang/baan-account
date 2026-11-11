@@ -1,0 +1,6 @@
+# clasp: เก็บ Script ID / token ไว้ในเครื่อง ไม่ขึ้น GitHub
+.clasp.json
+.clasprc.json
+node_modules/
+.DS_Store
+Thumbs.db
